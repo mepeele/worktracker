@@ -22,14 +22,13 @@
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { backgroundColor: var(--bg-color); color: var(--text-main); padding: 20px; padding-top: 60px; -webkit-user-select: none; }
-        .header { fontSize: 28px; fontWeight: bold; marginBottom: 20px; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; padding-top: 60px; -webkit-user-select: none; }
         .section-title { fontSize: 20px; fontWeight: bold; marginTop: 24px; marginBottom: 12px; }
         .card { background: var(--card-bg); padding: 16px; borderRadius: 12px; marginBottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .card-label { fontSize: 11px; fontWeight: bold; color: var(--text-muted); marginBottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        /* Interactive Buttons */
-        .primary-btn { width: 100%; padding: 16px; borderRadius: 12px; border: none; color: white; fontSize: 17px; fontWeight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s; }
+        /* Interactive Buttons - Enlarged Font Size */
+        .primary-btn { width: 100%; padding: 20px; borderRadius: 12px; border: none; color: white; fontSize: 24px; fontWeight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s; }
         .primary-btn:active { opacity: 0.8; }
         
         /* Layout Layouts */
@@ -51,8 +50,6 @@
     </style>
 </head>
 <body>
-
-    <h1 class="header">Time & Progress</h1>
 
     <!-- 1. PRIMARY ACTION INTERFACE -->
     <div class="card">
@@ -100,7 +97,6 @@
     let weeklyLogs = [];
     let timerInterval = null;
 
-    // Load state memory on startup
     window.onload = function() {
         if(localStorage.getItem('weekly_logs')) {
             weeklyLogs = JSON.parse(localStorage.getItem('weekly_logs'));
@@ -118,15 +114,12 @@
         updateUI();
     };
 
-    // Core Processing Mechanics
     function startTimerEngine() {
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             if(isLunchTimerRunning) {
                 lunchTimeRemaining--;
                 localStorage.setItem('saved_lunchTime', lunchTimeRemaining);
-                
-                // Soundless Audio Notification Support Fallback
                 if (lunchTimeRemaining === 120) {
                     alert("Lunch Break Ending Soon: You have 2 minutes left.");
                 }
@@ -186,7 +179,6 @@
         weeklyLogs.unshift(newLog);
         saveLogs();
 
-        // System Rest Reset
         document.getElementById('prodInput').value = '';
         lunchTimeRemaining = 1800;
         currentStage = 'Clock In';
@@ -201,7 +193,6 @@
         updateUI();
     }
 
-    // Mathematical Formatting Utilities
     function getWeekNumber(d) {
         d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
         d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
@@ -234,7 +225,6 @@
         weeklyLogs = weeklyLogs.map(log => {
             if(log.id === id) {
                 log[field] = parseInt(value) || 0;
-                // Instant Time-Math recalculations
                 if(field === 'lunchOverageMinutes') {
                     const rawMin = Math.max(0, Math.floor((new Date(log.timeOut) - new Date(log.timeIn)) / 60000));
                     log.netWorkMinutes = Math.max(0, rawMin - (30 + log.lunchOverageMinutes));
@@ -247,7 +237,6 @@
         updateUI();
     }
 
-    // Dynamic UI Renderer
     function updateUI() {
         const btn = document.getElementById('actionBtn');
         btn.innerText = currentStage;
@@ -256,19 +245,16 @@
         else if(currentStage === 'End Lunch & Return') btn.style.background = 'var(--color-return)';
         else btn.style.background = 'var(--color-out)';
 
-        // Format Lunch Counter View
         const absS = Math.abs(lunchTimeRemaining);
         const mins = Math.floor(absS / 60).toString().padStart(2, '0');
         const secs = (absS % 60).toString().padStart(2, '0');
         document.getElementById('lunchTimerText').innerText = `${lunchTimeRemaining < 0 ? '-' : ''}${mins}:${secs}`;
         document.getElementById('lunchHint').style.display = lunchTimeRemaining < 0 ? 'block' : 'none';
 
-        // Calculate Weekly Totals
         const currentWeek = getWeekNumber(new Date());
         const total = weeklyLogs.filter(l => l.weekOfYear === currentWeek).reduce((s, l) => s + l.productivityUnits, 0);
         document.getElementById('weeklyTotalDisplay').innerText = total;
 
-        // Populate Logs History Feed
         const container = document.getElementById('historyFeedContainer');
         container.innerHTML = '';
         
