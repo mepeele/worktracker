@@ -22,39 +22,52 @@
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; padding-top: 60px; -webkit-user-select: none; }
-        .section-title { fontSize: 20px; fontWeight: bold; marginTop: 24px; marginBottom: 12px; }
-        .card { background: var(--card-bg); padding: 16px; borderRadius: 12px; marginBottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .card-label { fontSize: 11px; fontWeight: bold; color: var(--text-muted); marginBottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; padding-top: 40px; -webkit-user-select: none; }
+        .section-title { font-size: 20px; font-weight: bold; traditions: 24px; margin-top: 24px; margin-bottom: 12px; }
+        .card { background: var(--card-bg); padding: 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card-label { font-size: 12px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
         
         /* Interactive Buttons - Enlarged Font Size */
-        .primary-btn { width: 100%; padding: 20px; borderRadius: 12px; border: none; color: white; fontSize: 24px; fontWeight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s; }
+        .primary-btn { width: 100%; padding: 24px; border-radius: 14px; border: none; color: white; font-size: 32px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .primary-btn:active { opacity: 0.8; }
         
-        /* Layout Layouts */
+        /* Layout Structuring */
         .row { display: flex; justify-content: space-between; align-items: center; }
         .row-inline { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; }
         .divider { height: 1px; background: #E5E5EA; margin: 12px 0; }
         
         /* Text Variants */
-        .bold { fontWeight: bold; }
-        .timer-text { fontSize: 20px; font-family: Courier, monospace; fontWeight: bold; }
-        .weekly-total { fontSize: 48px; fontWeight: bold; color: #007AFF; text-align: center; margin-top: 4px; }
-        .sub-text { fontSize: 13px; color: var(--text-muted); }
+        .bold { font-weight: bold; }
+        .timer-text { font-size: 20px; font-family: Courier, monospace; font-weight: bold; }
+        .weekly-total { font-size: 48px; font-weight: bold; color: #007AFF; text-align: center; margin-top: 4px; }
+        .sub-text { font-size: 13px; color: var(--text-muted); }
+        
+        /* Dropdown Control Selector */
+        .stage-dropdown { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #E5E5EA; background-color: var(--card-bg); font-size: 15px; color: var(--text-main); margin-top: 4px; font-weight: 500; }
         
         /* Manual Form Input Styling */
-        .input-box { width: 80px; background: #F2F2F7; border: none; padding: 6px; borderRadius: 6px; text-align: right; fontSize: 16px; fontWeight: bold; }
-        .small-input { width: 60px; background: #E5E5EA; border: none; padding: 4px; borderRadius: 4px; text-align: center; fontSize: 14px; }
-        .edit-panel { background: #F2F2F7; padding: 10px; borderRadius: 8px; margin-top: 8px; display: none; }
-        .edit-btn { color: #007AFF; fontWeight: bold; background: none; border: none; fontSize: 14px; cursor: pointer; }
+        .input-box { width: 80px; background: #F2F2F7; border: none; padding: 6px; border-radius: 6px; text-align: right; font-size: 16px; font-weight: bold; }
+        .small-input { width: 60px; background: #E5E5EA; border: none; padding: 4px; border-radius: 4px; text-align: center; font-size: 14px; }
+        .edit-panel { background: #F2F2F7; padding: 10px; border-radius: 8px; margin-top: 8px; display: none; }
+        .edit-btn { color: #007AFF; font-weight: bold; background: none; border: none; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <!-- 1. PRIMARY ACTION INTERFACE -->
-    <div class="card">
-        <div class="card-label">Active Tracking Action</div>
+    <!-- 1. TOP INTERFACE ACTION CONTAINER (REORDERED) -->
+    <div style="margin-bottom: 20px;">
         <button id="actionBtn" class="primary-btn" style="background: var(--color-in);" onclick="handlePrimaryAction()">Clock In</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding: 0 4px;">
+            <div class="card-label">Active Tracking Action</div>
+            <div style="width: 50%;">
+                <select id="stageSelect" class="stage-dropdown" onchange="handleStageDropdownChange(this.value)">
+                    <option value="Clock In">Clock In</option>
+                    <option value="Start Lunch">Start Lunch</option>
+                    <option value="End Lunch & Return">End Lunch & Return</option>
+                    <option value="Clock Out & Log Day">Clock Out & Log Day</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <!-- 2. LUNCH STATUS CARD -->
@@ -154,11 +167,45 @@
         updateUI();
     }
 
+    // Dropdown Override Manipulation Function
+    function handleStageDropdownChange(newStage) {
+        currentStage = newStage;
+        const now = new Date();
+        
+        // Contextually resolve underlying timer setups based on skip selections
+        if (newStage === 'Clock In') {
+            isLunchTimerRunning = false;
+            clearInterval(timerInterval);
+            lunchTimeRemaining = 1800;
+            localStorage.removeItem('saved_timeIn');
+        } else if (newStage === 'Start Lunch') {
+            if (!timeIn) timeIn = now;
+            isLunchTimerRunning = false;
+            clearInterval(timerInterval);
+            localStorage.setItem('saved_timeIn', timeIn.toISOString());
+        } else if (newStage === 'End Lunch & Return') {
+            if (!timeIn) timeIn = now;
+            isLunchTimerRunning = true;
+            startTimerEngine();
+            localStorage.setItem('saved_timeIn', timeIn.toISOString());
+            localStorage.setItem('saved_isLunchRunning', 'true');
+        } else if (newStage === 'Clock Out & Log Day') {
+            isLunchTimerRunning = false;
+            clearInterval(timerInterval);
+            localStorage.setItem('saved_isLunchRunning', 'false');
+        }
+        
+        localStorage.setItem('saved_stage', currentStage);
+        updateUI();
+    }
+
     function logDayMetrics(finalTimeOut) {
         const units = parseInt(document.getElementById('prodInput').value) || 0;
         const currentWeek = getWeekNumber(new Date());
         
-        const diff = finalTimeOut - timeIn;
+        // Base dynamic check parameters
+        const fallbackIn = timeIn ? timeIn : finalTimeOut;
+        const diff = finalTimeOut - fallbackIn;
         const rawMin = Math.max(0, Math.floor(diff / 60000));
         const overageMin = lunchTimeRemaining < 0 ? Math.abs(Math.floor(lunchTimeRemaining / 60)) : 0;
         const netMin = Math.max(0, rawMin - (30 + overageMin));
@@ -167,7 +214,7 @@
         const newLog = {
             id: Math.random().toString(36).substr(2, 9),
             dateString: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
-            timeIn: timeIn.toISOString(),
+            timeIn: fallbackIn.toISOString(),
             timeOut: finalTimeOut.toISOString(),
             productivityUnits: units,
             lunchOverageMinutes: overageMin,
@@ -244,6 +291,9 @@
         else if(currentStage === 'Start Lunch') btn.style.background = 'var(--color-lunch)';
         else if(currentStage === 'End Lunch & Return') btn.style.background = 'var(--color-return)';
         else btn.style.background = 'var(--color-out)';
+
+        // Ensure dropdown list selector visual status aligns with state changes
+        document.getElementById('stageSelect').value = currentStage;
 
         const absS = Math.abs(lunchTimeRemaining);
         const mins = Math.floor(absS / 60).toString().padStart(2, '0');
