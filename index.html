@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Time & Progress</title>
+    <!-- iOS PWA Capabilities -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="WorkTracker">
+    
+    <style>
+        :root {
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-main: #1C1C1E;
+            --text-muted: #8E8E93;
+            --color-in: #34C759;
+            --color-lunch: #007AFF;
+            --color-return: #FF9500;
+            --color-out: #5856D6;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { backgroundColor: var(--bg-color); color: var(--text-main); padding: 20px; padding-top: 60px; -webkit-user-select: none; }
+        .header { fontSize: 28px; fontWeight: bold; marginBottom: 20px; }
+        .section-title { fontSize: 20px; fontWeight: bold; marginTop: 24px; marginBottom: 12px; }
+        .card { background: var(--card-bg); padding: 16px; borderRadius: 12px; marginBottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card-label { fontSize: 11px; fontWeight: bold; color: var(--text-muted); marginBottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Interactive Buttons */
+        .primary-btn { width: 100%; padding: 16px; borderRadius: 12px; border: none; color: white; fontSize: 17px; fontWeight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s; }
+        .primary-btn:active { opacity: 0.8; }
+        
+        /* Layout Layouts */
+        .row { display: flex; justify-content: space-between; align-items: center; }
+        .row-inline { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; }
+        .divider { height: 1px; background: #E5E5EA; margin: 12px 0; }
+        
+        /* Text Variants */
+        .bold { fontWeight: bold; }
+        .timer-text { fontSize: 20px; font-family: Courier, monospace; fontWeight: bold; }
+        .weekly-total { fontSize: 48px; fontWeight: bold; color: #007AFF; text-align: center; margin-top: 4px; }
+        .sub-text { fontSize: 13px; color: var(--text-muted); }
+        
+        /* Manual Form Input Styling */
+        .input-box { width: 80px; background: #F2F2F7; border: none; padding: 6px; borderRadius: 6px; text-align: right; fontSize: 16px; fontWeight: bold; }
+        .small-input { width: 60px; background: #E5E5EA; border: none; padding: 4px; borderRadius: 4px; text-align: center; fontSize: 14px; }
+        .edit-panel { background: #F2F2F7; padding: 10px; borderRadius: 8px; margin-top: 8px; display: none; }
+        .edit-btn { color: #007AFF; fontWeight: bold; background: none; border: none; fontSize: 14px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1 class="header">Time & Progress</h1>
+
+    <!-- 1. PRIMARY ACTION INTERFACE -->
+    <div class="card">
+        <div class="card-label">Active Tracking Action</div>
+        <button id="actionBtn" class="primary-btn" style="background: var(--color-in);" onclick="handlePrimaryAction()">Clock In</button>
+    </div>
+
+    <!-- 2. LUNCH STATUS CARD -->
+    <div class="card">
+        <div class="row">
+            <div>
+                <div class="bold">30-Min Lunch Break</div>
+                <div id="lunchHint" class="sub-text" style="color: red; display: none;">Lunch Overtime (Deducting)</div>
+            </div>
+            <div id="lunchTimerText" class="timer-text">30:00</div>
+        </div>
+    </div>
+
+    <!-- 3. CURRENT PRODUCTION INPUT -->
+    <div class="card">
+        <div class="card-label">Productivity Metric</div>
+        <div class="row">
+            <div class="body-text">Units Completed:</div>
+            <input type="number" id="prodInput" class="input-box" placeholder="0" oninput="updateLiveUnits()">
+        </div>
+    </div>
+
+    <!-- 4. WEEKLY SCOREBOARD VIEW -->
+    <div class="card" style="background: rgba(0,122,255,0.1); box-shadow: none;">
+        <div class="card-label" style="text-align: center;">Running Weekly Total</div>
+        <div id="weeklyTotalDisplay" class="weekly-total">0</div>
+    </div>
+
+    <!-- 5. HISTORICAL FEED LIST -->
+    <h2 class="section-title">This Week's History</h2>
+    <div id="historyFeedContainer"></div>
+
+<script>
+    // System Operational Values
+    let currentStage = 'Clock In';
+    let timeIn = null;
+    let timeOut = null;
+    let lunchTimeRemaining = 1800; // 30 mins
+    let isLunchTimerRunning = false;
+    let weeklyLogs = [];
+    let timerInterval = null;
+
+    // Load state memory on startup
+    window.onload = function() {
+        if(localStorage.getItem('weekly_logs')) {
+            weeklyLogs = JSON.parse(localStorage.getItem('weekly_logs'));
+        }
+        if(localStorage.getItem('saved_stage')) {
+            currentStage = localStorage.getItem('saved_stage');
+            if(localStorage.getItem('saved_timeIn')) timeIn = new Date(localStorage.getItem('saved_timeIn'));
+            if(localStorage.getItem('saved_lunchTime')) lunchTimeRemaining = parseInt(localStorage.getItem('saved_lunchTime'));
+            if(localStorage.getItem('saved_isLunchRunning') === 'true') {
+                isLunchTimerRunning = true;
+                startTimerEngine();
+            }
+        }
+        clearOldWeeksLogs();
+        updateUI();
+    };
+
+    // Core Processing Mechanics
+    function startTimerEngine() {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if(isLunchTimerRunning) {
+                lunchTimeRemaining--;
+                localStorage.setItem('saved_lunchTime', lunchTimeRemaining);
+                
+                // Soundless Audio Notification Support Fallback
+                if (lunchTimeRemaining === 120) {
+                    alert("Lunch Break Ending Soon: You have 2 minutes left.");
+                }
+                updateUI();
+            }
+        }, 1000);
+    }
+
+    function handlePrimaryAction() {
+        const now = new Date();
+        if (currentStage === 'Clock In') {
+            timeIn = now;
+            timeOut = now;
+            currentStage = 'Start Lunch';
+            localStorage.setItem('saved_timeIn', timeIn.toISOString());
+        } else if (currentStage === 'Start Lunch') {
+            isLunchTimerRunning = true;
+            currentStage = 'End Lunch & Return';
+            startTimerEngine();
+            localStorage.setItem('saved_isLunchRunning', 'true');
+        } else if (currentStage === 'End Lunch & Return') {
+            isLunchTimerRunning = false;
+            clearInterval(timerInterval);
+            currentStage = 'Clock Out & Log Day';
+            localStorage.setItem('saved_isLunchRunning', 'false');
+        } else if (currentStage === 'Clock Out & Log Day') {
+            timeOut = now;
+            logDayMetrics(timeOut);
+            return;
+        }
+        localStorage.setItem('saved_stage', currentStage);
+        updateUI();
+    }
+
+    function logDayMetrics(finalTimeOut) {
+        const units = parseInt(document.getElementById('prodInput').value) || 0;
+        const currentWeek = getWeekNumber(new Date());
+        
+        const diff = finalTimeOut - timeIn;
+        const rawMin = Math.max(0, Math.floor(diff / 60000));
+        const overageMin = lunchTimeRemaining < 0 ? Math.abs(Math.floor(lunchTimeRemaining / 60)) : 0;
+        const netMin = Math.max(0, rawMin - (30 + overageMin));
+        const varianceMin = netMin - 480;
+
+        const newLog = {
+            id: Math.random().toString(36).substr(2, 9),
+            dateString: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
+            timeIn: timeIn.toISOString(),
+            timeOut: finalTimeOut.toISOString(),
+            productivityUnits: units,
+            lunchOverageMinutes: overageMin,
+            netWorkMinutes: netMin,
+            varianceMinutes: varianceMin,
+            weekOfYear: currentWeek
+        };
+
+        weeklyLogs.unshift(newLog);
+        saveLogs();
+
+        // System Rest Reset
+        document.getElementById('prodInput').value = '';
+        lunchTimeRemaining = 1800;
+        currentStage = 'Clock In';
+        timeIn = null;
+        timeOut = null;
+        
+        localStorage.removeItem('saved_stage');
+        localStorage.removeItem('saved_timeIn');
+        localStorage.removeItem('saved_lunchTime');
+        localStorage.removeItem('saved_isLunchRunning');
+        
+        updateUI();
+    }
+
+    // Mathematical Formatting Utilities
+    function getWeekNumber(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+    }
+
+    function clearOldWeeksLogs() {
+        const currentWeek = getWeekNumber(new Date());
+        weeklyLogs = weeklyLogs.filter(log => log.weekOfYear === currentWeek);
+        saveLogs();
+    }
+
+    function saveLogs() {
+        localStorage.setItem('weekly_logs', JSON.stringify(weeklyLogs));
+    }
+
+    function toggleEditView(id) {
+        const panel = document.getElementById(`edit-${id}`);
+        const btn = document.getElementById(`btn-${id}`);
+        if(panel.style.display === 'block') {
+            panel.style.display = 'none';
+            btn.innerText = 'Edit';
+        } else {
+            panel.style.display = 'block';
+            btn.innerText = 'Done';
+        }
+    }
+
+    function updateLogField(id, field, value) {
+        weeklyLogs = weeklyLogs.map(log => {
+            if(log.id === id) {
+                log[field] = parseInt(value) || 0;
+                // Instant Time-Math recalculations
+                if(field === 'lunchOverageMinutes') {
+                    const rawMin = Math.max(0, Math.floor((new Date(log.timeOut) - new Date(log.timeIn)) / 60000));
+                    log.netWorkMinutes = Math.max(0, rawMin - (30 + log.lunchOverageMinutes));
+                    log.varianceMinutes = log.netWorkMinutes - 480;
+                }
+            }
+            return log;
+        });
+        saveLogs();
+        updateUI();
+    }
+
+    // Dynamic UI Renderer
+    function updateUI() {
+        const btn = document.getElementById('actionBtn');
+        btn.innerText = currentStage;
+        if(currentStage === 'Clock In') btn.style.background = 'var(--color-in)';
+        else if(currentStage === 'Start Lunch') btn.style.background = 'var(--color-lunch)';
+        else if(currentStage === 'End Lunch & Return') btn.style.background = 'var(--color-return)';
+        else btn.style.background = 'var(--color-out)';
+
+        // Format Lunch Counter View
+        const absS = Math.abs(lunchTimeRemaining);
+        const mins = Math.floor(absS / 60).toString().padStart(2, '0');
+        const secs = (absS % 60).toString().padStart(2, '0');
+        document.getElementById('lunchTimerText').innerText = `${lunchTimeRemaining < 0 ? '-' : ''}${mins}:${secs}`;
+        document.getElementById('lunchHint').style.display = lunchTimeRemaining < 0 ? 'block' : 'none';
+
+        // Calculate Weekly Totals
+        const currentWeek = getWeekNumber(new Date());
+        const total = weeklyLogs.filter(l => l.weekOfYear === currentWeek).reduce((s, l) => s + l.productivityUnits, 0);
+        document.getElementById('weeklyTotalDisplay').innerText = total;
+
+        // Populate Logs History Feed
+        const container = document.getElementById('historyFeedContainer');
+        container.innerHTML = '';
+        
+        weeklyLogs.forEach(log => {
+            const html = `
+                <div class="card" style="border: 1px solid #E5E5EA;">
+                    <div class="row">
+                        <div>
+                            <div class="bold">${log.dateString}</div>
+                            <div class="sub-text">${new Date(log.timeIn).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} - ${new Date(log.timeOut).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+                        </div>
+                        <button id="btn-${log.id}" class="edit-btn" onclick="toggleEditView('${log.id}')">Edit</button>
+                    </div>
+                    
+                    <div id="edit-${log.id}" class="edit-panel">
+                        <div class="row-inline">
+                            <span class="sub-text">Units Completed:</span>
+                            <input type="number" class="small-input" value="${log.productivityUnits}" oninput="updateLogField('${log.id}', 'productivityUnits', this.value)">
+                        </div>
+                        <div class="row-inline">
+                            <span class="sub-text">Lunch Overage (m):</span>
+                            <input type="number" class="small-input" value="${log.lunchOverageMinutes}" oninput="updateLogField('${log.id}', 'lunchOverageMinutes', this.value)">
+                        </div>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    <div class="row">
+                        <span class="sub-text">Net: ${Math.floor(log.netWorkMinutes/60)}h ${log.netWorkMinutes%60}m</span>
+                        <span class="sub-text" style="color: ${log.varianceMinutes >= 0 ? 'green':'red'}">Variance: ${log.varianceMinutes >= 0 ? '+':''}${log.varianceMinutes}m</span>
+                        <span class="bold" style="color: #007AFF">${log.productivityUnits} units</span>
+                    </div>
+                </div>`;
+            container.innerHTML += html;
+        });
+    }
+
+    function updateLiveUnits() { localStorage.setItem('saved_manual_units', document.getElementById('prodInput').value); }
+</script>
+</body>
+</html>
