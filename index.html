@@ -16,8 +16,8 @@
             --text-main: #1C1C1E;
             --text-muted: #8E8E93;
             --color-in: #34C759;
-            --color-lunch: #007AFF;
-            --color-return: #FF9500;
+            --color-lunch-out: #007AFF;
+            --color-lunch-in: #FF9500;
             --color-out: #5856D6;
         }
         
@@ -38,7 +38,6 @@
         
         /* Text Variants */
         .bold { font-weight: bold; }
-        .timer-text { font-size: 20px; font-family: Courier, monospace; font-weight: bold; }
         .weekly-total { font-size: 44px; font-weight: 900; color: #007AFF; line-height: 1; }
         .sub-text { font-size: 13px; color: var(--text-muted); }
         
@@ -47,11 +46,11 @@
         
         /* Live Adjustment Inputs */
         .live-edit-btn { background: #E5E5EA; border: none; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; color: var(--text-main); cursor: pointer; }
-        .time-display-box { font-size: 14px; font-weight: bold; color: #007AFF; background: #F2F2F7; padding: 4px 8px; border-radius: 6px; }
+        .time-display-box { font-size: 13px; font-weight: bold; color: #007AFF; background: #F2F2F7; padding: 4px 6px; border-radius: 6px; }
         
         /* Form Inputs */
         .input-box { width: 80px; background: #F2F2F7; border: none; padding: 8px; border-radius: 6px; text-align: right; font-size: 18px; font-weight: bold; color: #007AFF; }
-        .small-input { width: 60px; background: #E5E5EA; border: none; padding: 4px; border-radius: 4px; text-align: center; font-size: 14px; }
+        .small-input { width: 65px; background: #E5E5EA; border: none; padding: 4px; border-radius: 4px; text-align: center; font-size: 13px; }
         .edit-panel { background: #F2F2F7; padding: 10px; border-radius: 8px; margin-top: 8px; display: none; }
         .edit-btn { color: #007AFF; font-weight: bold; background: none; border: none; font-size: 14px; cursor: pointer; }
     </style>
@@ -66,48 +65,53 @@
             <div style="width: 50%;">
                 <select id="stageSelect" class="stage-dropdown" onchange="handleStageDropdownChange(this.value)">
                     <option value="Clock In">Clock In</option>
-                    <option value="Start Lunch">Start Lunch</option>
-                    <option value="End Lunch & Return">End Lunch & Return</option>
+                    <option value="Lunch Out">Lunch Out</option>
+                    <option value="Lunch In">Lunch In</option>
                     <option value="Clock Out & Log Day">Clock Out & Log Day</option>
                 </select>
             </div>
         </div>
     </div>
 
-    <!-- 2. CURRENT ACTIVE SHIFT CONTROLS (NEW: PRIOR TAP EDITING) -->
+    <!-- 2. CURRENT ACTIVE SHIFT CONTROLS -->
     <div class="card" id="currentShiftCard" style="display: none;">
-        <div class="card-label">Active Shift Tracker</div>
-        <div class="row-inline" style="margin-top: 10px;">
-            <span class="bold" style="font-size: 15px;">Time In:</span>
+        <div class="card-label">Active Shift Tracker (Live Previews)</div>
+        
+        <div id="liveInRow" class="row-inline" style="margin-top: 10px; display: none;">
+            <span class="bold" style="font-size: 14px;">Clock In:</span>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <button class="live-edit-btn" onclick="adjustActiveTimeIn(-1)">-1m</button>
+                <button class="live-edit-btn" onclick="adjustActiveTime('timeIn', -1)">-1m</button>
                 <span id="liveTimeInDisplay" class="time-display-box">--:--</span>
-                <button class="live-edit-btn" onclick="adjustActiveTimeIn(1)">+1m</button>
+                <button class="live-edit-btn" onclick="adjustActiveTime('timeIn', 1)">+1m</button>
             </div>
         </div>
+        
+        <div id="liveLunchOutRow" class="row-inline" style="display: none;">
+            <span class="bold" style="font-size: 14px;">Lunch Out:</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="live-edit-btn" onclick="adjustActiveTime('lunchOut', -1)">-1m</button>
+                <span id="liveLunchOutDisplay" class="time-display-box">--:--</span>
+                <button class="live-edit-btn" onclick="adjustActiveTime('lunchOut', 1)">+1m</button>
+            </div>
+        </div>
+
+        <div id="liveLunchInRow" class="row-inline" style="display: none;">
+            <span class="bold" style="font-size: 14px;">Lunch In:</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="live-edit-btn" onclick="adjustActiveTime('lunchIn', -1)">-1m</button>
+                <span id="liveLunchInDisplay" class="time-display-box">--:--</span>
+                <button class="live-edit-btn" onclick="adjustActiveTime('lunchIn', 1)">+1m</button>
+            </div>
+        </div>
+        
         <div class="divider"></div>
         <div class="row">
-            <span class="sub-text">Current Net Work time: <span id="liveNetDisplay" class="bold">0h 0m</span></span>
+            <span class="sub-text">Estimated Net: <span id="liveNetDisplay" class="bold">0h 0m</span> <span class="sub-text" style="font-size:11px;">(Rounded to 1/4 hr)</span></span>
             <span class="sub-text">Variance: <span id="liveVarianceDisplay" class="bold">--</span></span>
         </div>
     </div>
 
-    <!-- 3. LUNCH STATUS CARD (NEW: PRIOR LUNCH TAP EDITING) -->
-    <div class="card">
-        <div class="row">
-            <div>
-                <div class="bold">30-Min Lunch Break</div>
-                <div id="lunchHint" class="sub-text" style="color: red; display: none;">Lunch Overtime (Deducting)</div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <button class="live-edit-btn" id="lunchMinusBtn" style="display:none;" onclick="adjustActiveLunch(-60)">-1m</button>
-                <div id="lunchTimerText" class="timer-text">30:00</div>
-                <button class="live-edit-btn" id="lunchPlusBtn" style="display:none;" onclick="adjustActiveLunch(60)">+1m</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. MERGED PRODUCTIVITY DASHBOARD CARD -->
+    <!-- 3. MERGED PRODUCTIVITY DASHBOARD CARD -->
     <div class="card" style="background: rgba(0,122,255,0.06); border: 1px solid rgba(0,122,255,0.15);">
         <div class="card-label" style="color: #007AFF;">Productivity</div>
         <div class="row" style="margin-top: 12px; margin-bottom: 8px;">
@@ -122,7 +126,7 @@
         </div>
     </div>
 
-    <!-- 5. HISTORICAL FEED LIST -->
+    <!-- 4. HISTORICAL FEED LIST -->
     <h2 class="section-title">This Week's History</h2>
     <div id="historyFeedContainer"></div>
 
@@ -130,11 +134,10 @@
     // System Operational Values
     let currentStage = 'Clock In';
     let timeIn = null;
+    let lunchOut = null;
+    let lunchIn = null;
     let timeOut = null;
-    let lunchTimeRemaining = 1800; // 30 mins
-    let isLunchTimerRunning = false;
     let weeklyLogs = [];
-    let timerInterval = null;
 
     window.onload = function() {
         if(localStorage.getItem('weekly_logs')) {
@@ -143,42 +146,24 @@
         if(localStorage.getItem('saved_stage')) {
             currentStage = localStorage.getItem('saved_stage');
             if(localStorage.getItem('saved_timeIn')) timeIn = new Date(localStorage.getItem('saved_timeIn'));
-            if(localStorage.getItem('saved_lunchTime')) lunchTimeRemaining = parseInt(localStorage.getItem('saved_lunchTime'));
-            if(localStorage.getItem('saved_isLunchRunning') === 'true') {
-                isLunchTimerRunning = true;
-                startTimerEngine();
-            }
+            if(localStorage.getItem('saved_lunchOut')) lunchOut = new Date(localStorage.getItem('saved_lunchOut'));
+            if(localStorage.getItem('saved_lunchIn')) lunchIn = new Date(localStorage.getItem('saved_lunchIn'));
         }
         clearOldWeeksLogs();
         updateUI();
     };
 
-    function startTimerEngine() {
-        clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            if(isLunchTimerRunning) {
-                lunchTimeRemaining--;
-                localStorage.setItem('saved_lunchTime', lunchTimeRemaining);
-                if (lunchTimeRemaining === 120) {
-                    alert("Lunch Break Ending Soon: You have 2 minutes left.");
-                }
-                updateUI();
-            }
-        }, 1000);
-    }
-
-    // New Control: Manually edit "Time In" tap value during the workday
-    function adjustActiveTimeIn(minutes) {
-        if (!timeIn) return;
-        timeIn.setMinutes(timeIn.getMinutes() + minutes);
-        localStorage.setItem('saved_timeIn', timeIn.toISOString());
-        updateUI();
-    }
-
-    // New Control: Manually edit lunch timer mid-break or retroactively fix overage mins
-    function adjustActiveLunch(seconds) {
-        lunchTimeRemaining += seconds;
-        localStorage.setItem('saved_lunchTime', lunchTimeRemaining);
+    function adjustActiveTime(field, minutes) {
+        if (field === 'timeIn' && timeIn) {
+            timeIn.setMinutes(timeIn.getMinutes() + minutes);
+            localStorage.setItem('saved_timeIn', timeIn.toISOString());
+        } else if (field === 'lunchOut' && lunchOut) {
+            lunchOut.setMinutes(lunchOut.getMinutes() + minutes);
+            localStorage.setItem('saved_lunchOut', lunchOut.toISOString());
+        } else if (field === 'lunchIn' && lunchIn) {
+            lunchIn.setMinutes(lunchIn.getMinutes() + minutes);
+            localStorage.setItem('saved_lunchIn', lunchIn.toISOString());
+        }
         updateUI();
     }
 
@@ -186,19 +171,16 @@
         const now = new Date();
         if (currentStage === 'Clock In') {
             timeIn = now;
-            timeOut = now;
-            currentStage = 'Start Lunch';
+            currentStage = 'Lunch Out';
             localStorage.setItem('saved_timeIn', timeIn.toISOString());
-        } else if (currentStage === 'Start Lunch') {
-            isLunchTimerRunning = true;
-            currentStage = 'End Lunch & Return';
-            startTimerEngine();
-            localStorage.setItem('saved_isLunchRunning', 'true');
-        } else if (currentStage === 'End Lunch & Return') {
-            isLunchTimerRunning = false;
-            clearInterval(timerInterval);
+        } else if (currentStage === 'Lunch Out') {
+            lunchOut = now;
+            currentStage = 'Lunch In';
+            localStorage.setItem('saved_lunchOut', lunchOut.toISOString());
+        } else if (currentStage === 'Lunch In') {
+            lunchIn = now;
             currentStage = 'Clock Out & Log Day';
-            localStorage.setItem('saved_isLunchRunning', 'false');
+            localStorage.setItem('saved_lunchIn', lunchIn.toISOString());
         } else if (currentStage === 'Clock Out & Log Day') {
             timeOut = now;
             logDayMetrics(timeOut);
@@ -213,31 +195,56 @@
         const now = new Date();
         
         if (newStage === 'Clock In') {
-            isLunchTimerRunning = false;
-            clearInterval(timerInterval);
-            lunchTimeRemaining = 1800;
-            timeIn = null;
+            timeIn = null; lunchOut = null; lunchIn = null;
             localStorage.removeItem('saved_timeIn');
-        } else if (newStage === 'Start Lunch') {
+            localStorage.removeItem('saved_lunchOut');
+            localStorage.removeItem('saved_lunchIn');
+        } else if (newStage === 'Lunch Out') {
             if (!timeIn) timeIn = now;
-            isLunchTimerRunning = false;
-            clearInterval(timerInterval);
+            lunchOut = null; lunchIn = null;
             localStorage.setItem('saved_timeIn', timeIn.toISOString());
-        } else if (newStage === 'End Lunch & Return') {
+            localStorage.removeItem('saved_lunchOut');
+            localStorage.removeItem('saved_lunchIn');
+        } else if (newStage === 'Lunch In') {
             if (!timeIn) timeIn = now;
-            isLunchTimerRunning = true;
-            startTimerEngine();
+            if (!lunchOut) lunchOut = now;
+            lunchIn = null;
             localStorage.setItem('saved_timeIn', timeIn.toISOString());
-            localStorage.setItem('saved_isLunchRunning', 'true');
+            localStorage.setItem('saved_lunchOut', lunchOut.toISOString());
+            localStorage.removeItem('saved_lunchIn');
         } else if (newStage === 'Clock Out & Log Day') {
             if (!timeIn) timeIn = now;
-            isLunchTimerRunning = false;
-            clearInterval(timerInterval);
-            localStorage.setItem('saved_isLunchRunning', 'false');
+            if (!lunchOut) lunchOut = now;
+            if (!lunchIn) lunchIn = now;
+            localStorage.setItem('saved_timeIn', timeIn.toISOString());
+            localStorage.setItem('saved_lunchOut', lunchOut.toISOString());
+            localStorage.setItem('saved_lunchIn', lunchIn.toISOString());
         }
         
         localStorage.setItem('saved_stage', currentStage);
         updateUI();
+    }
+
+    // New Formula: Rounding calculations directly to the nearest quarter of an hour (15-minute intervals)
+    function roundToNearestQuarter(totalMinutes) {
+        return Math.round(totalMinutes / 15) * 15;
+    }
+
+    function calculateNetMinutes(tIn, lOut, lIn, tOut) {
+        if (!tIn || !tOut) return 0;
+        
+        const totalShiftMinutes = Math.max(0, Math.floor((tOut - tIn) / 60000));
+        let lunchDuration = 30; // Default flat deduction
+        
+        if (lOut && lIn) {
+            const actualLunchMinutes = Math.floor((lIn - lOut) / 60000);
+            if (actualLunchMinutes > 30) {
+                lunchDuration = actualLunchMinutes; // Expand deduction if they run over overage
+            }
+        }
+        
+        const rawNet = Math.max(0, totalShiftMinutes - lunchDuration);
+        return roundToNearestQuarter(rawNet);
     }
 
     function logDayMetrics(finalTimeOut) {
@@ -245,19 +252,20 @@
         const currentWeek = getWeekNumber(new Date());
         
         const fallbackIn = timeIn ? timeIn : finalTimeOut;
-        const diff = finalTimeOut - fallbackIn;
-        const rawMin = Math.max(0, Math.floor(diff / 60000));
-        const overageMin = lunchTimeRemaining < 0 ? Math.abs(Math.floor(lunchTimeRemaining / 60)) : 0;
-        const netMin = Math.max(0, rawMin - (30 + overageMin));
+        const fallbackLunchOut = lunchOut ? lunchOut : fallbackIn;
+        const fallbackLunchIn = lunchIn ? lunchIn : fallbackLunchOut;
+        
+        const netMin = calculateNetMinutes(fallbackIn, fallbackLunchOut, fallbackLunchIn, finalTimeOut);
         const varianceMin = netMin - 480;
 
         const newLog = {
             id: Math.random().toString(36).substr(2, 9),
             dateString: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
             timeIn: fallbackIn.toISOString(),
+            lunchOut: fallbackLunchOut.toISOString(),
+            lunchIn: fallbackLunchIn.toISOString(),
             timeOut: finalTimeOut.toISOString(),
             productivityUnits: units,
-            lunchOverageMinutes: overageMin,
             netWorkMinutes: netMin,
             varianceMinutes: varianceMin,
             weekOfYear: currentWeek
@@ -266,16 +274,15 @@
         weeklyLogs.unshift(newLog);
         saveLogs();
 
+        // Hard System Reset Cleanups
         document.getElementById('prodInput').value = '';
-        lunchTimeRemaining = 1800;
         currentStage = 'Clock In';
-        timeIn = null;
-        timeOut = null;
+        timeIn = null; lunchOut = null; lunchIn = null; timeOut = null;
         
         localStorage.removeItem('saved_stage');
         localStorage.removeItem('saved_timeIn');
-        localStorage.removeItem('saved_lunchTime');
-        localStorage.removeItem('saved_isLunchRunning');
+        localStorage.removeItem('saved_lunchOut');
+        localStorage.removeItem('saved_lunchIn');
         
         updateUI();
     }
@@ -297,24 +304,27 @@
     function toggleEditView(id) {
         const panel = document.getElementById(`edit-${id}`);
         const btn = document.getElementById(`btn-${id}`);
-        if(panel.style.display === 'block') {
-            panel.style.display = 'none';
-            btn.innerText = 'Edit';
-        } else {
-            panel.style.display = 'block';
-            btn.innerText = 'Done';
-        }
+        panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+        btn.innerText = (panel.style.display === 'block') ? 'Done' : 'Edit';
     }
 
     function updateLogField(id, field, value) {
         weeklyLogs = weeklyLogs.map(log => {
             if(log.id === id) {
-                log[field] = parseInt(value) || 0;
-                if(field === 'lunchOverageMinutes') {
-                    const rawMin = Math.max(0, Math.floor((new Date(log.timeOut) - new Date(log.timeIn)) / 60000));
-                    log.netWorkMinutes = Math.max(0, rawMin - (30 + log.lunchOverageMinutes));
-                    log.varianceMinutes = log.netWorkMinutes - 480;
+                if (field === 'productivityUnits') {
+                    log.productivityUnits = parseInt(value) || 0;
+                } else {
+                    // Update ISO timestamps from manual editing text lines safely
+                    try {
+                        const parsedDate = new Date(value);
+                        if (!isNaN(parsedDate.getTime())) {
+                            log[field] = parsedDate.toISOString();
+                        }
+                    } catch(e){}
                 }
+                // Update time math calculations
+                log.netWorkMinutes = calculateNetMinutes(new Date(log.timeIn), new Date(log.lunchOut), new Date(log.lunchIn), new Date(log.timeOut));
+                log.varianceMinutes = log.netWorkMinutes - 480;
             }
             return log;
         });
@@ -324,31 +334,36 @@
 
     function formatMinsToH_M(m) { return `${Math.floor(m / 60)}h ${m % 60}m`; }
     function formatVariance(m) { return `${m >= 0 ? '+':''}${m}m`; }
+    function formatTimeLabel(dString) { return dString ? new Date(dString).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'; }
 
     function updateUI() {
         const btn = document.getElementById('actionBtn');
         btn.innerText = currentStage;
         if(currentStage === 'Clock In') btn.style.background = 'var(--color-in)';
-        else if(currentStage === 'Start Lunch') btn.style.background = 'var(--color-lunch)';
-        else if(currentStage === 'End Lunch & Return') btn.style.background = 'var(--color-return)';
+        else if(currentStage === 'Lunch Out') btn.style.background = 'var(--color-lunch-out)';
+        else if(currentStage === 'Lunch In') btn.style.background = 'var(--color-lunch-in)';
         else btn.style.background = 'var(--color-out)';
 
         document.getElementById('stageSelect').value = currentStage;
 
-        // Active Shift Card UI updates
+        // Render Active Card
         const activeShiftCard = document.getElementById('currentShiftCard');
         if (timeIn) {
             activeShiftCard.style.display = 'block';
-            document.getElementById('liveTimeInDisplay').innerText = timeIn.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            // Render Live Running Approximations
-            const currentDiff = new Date() - timeIn;
-            const currentRawMin = Math.max(0, Math.floor(currentDiff / 60000));
-            const currentOverageMin = lunchTimeRemaining < 0 ? Math.abs(Math.floor(lunchTimeRemaining / 60)) : 0;
-            const currentNetMin = Math.max(0, currentRawMin - (30 + currentOverageMin));
+            document.getElementById('liveInRow').style.display = 'flex';
+            document.getElementById('liveTimeInDisplay').innerText = formatTimeLabel(timeIn);
             
-            document.getElementById('liveNetDisplay').innerText = formatMinsToH_M(currentNetMin);
-            const variance = currentNetMin - 480;
+            document.getElementById('liveLunchOutRow').style.display = lunchOut ? 'flex' : 'none';
+            if(lunchOut) document.getElementById('liveLunchOutDisplay').innerText = formatTimeLabel(lunchOut);
+            
+            document.getElementById('liveLunchInRow').style.display = lunchIn ? 'flex' : 'none';
+            if(lunchIn) document.getElementById('liveLunchInDisplay').innerText = formatTimeLabel(lunchIn);
+            
+            const liveNet = calculateNetMinutes(timeIn, lunchOut, lunchIn, new Date());
+            document.getElementById('liveNetDisplay').innerText = formatMinsToH_M(liveNet);
+            
+            const variance = liveNet - 480;
             const varElem = document.getElementById('liveVarianceDisplay');
             varElem.innerText = formatVariance(variance);
             varElem.style.color = variance >= 0 ? 'green' : 'red';
@@ -356,22 +371,12 @@
             activeShiftCard.style.display = 'none';
         }
 
-        // Show live lunch modifiers once lunch has been triggered at least once
-        const showLunchAdjusters = currentStage !== 'Clock In' && currentStage !== 'Start Lunch';
-        document.getElementById('lunchMinusBtn').style.display = showLunchAdjusters ? 'block' : 'none';
-        document.getElementById('lunchPlusBtn').style.display = showLunchAdjusters ? 'block' : 'none';
-
-        const absS = Math.abs(lunchTimeRemaining);
-        const mins = Math.floor(absS / 60).toString().padStart(2, '0');
-        const secs = (absS % 60).toString().padStart(2, '0');
-        document.getElementById('lunchTimerText').innerText = `${lunchTimeRemaining < 0 ? '-' : ''}${mins}:${secs}`;
-        document.getElementById('lunchHint').style.display = lunchTimeRemaining < 0 ? 'block' : 'none';
-
         // Calculate Weekly Totals
         const currentWeek = getWeekNumber(new Date());
         const total = weeklyLogs.filter(l => l.weekOfYear === currentWeek).reduce((s, l) => s + l.productivityUnits, 0);
         document.getElementById('weeklyTotalDisplay').innerText = total;
 
+        // Render Logs Feed Card Blocks
         const container = document.getElementById('historyFeedContainer');
         container.innerHTML = '';
         
@@ -381,7 +386,12 @@
                     <div class="row">
                         <div>
                             <div class="bold">${log.dateString}</div>
-                            <div class="sub-text">${new Date(log.timeIn).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} - ${new Date(log.timeOut).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+                            <div class="sub-text" style="font-size:11px; margin-top:2px; color:#555;">
+                                🏁 In: <b>${formatTimeLabel(log.timeIn)}</b> | 
+                                🥪 Out: <b>${formatTimeLabel(log.lunchOut)}</b> | 
+                                🍏 In: <b>${formatTimeLabel(log.lunchIn)}</b> | 
+                                🛑 Out: <b>${formatTimeLabel(log.timeOut)}</b>
+                            </div>
                         </div>
                         <button id="btn-${log.id}" class="edit-btn" onclick="toggleEditView('${log.id}')">Edit</button>
                     </div>
@@ -392,8 +402,20 @@
                             <input type="number" class="small-input" value="${log.productivityUnits}" oninput="updateLogField('${log.id}', 'productivityUnits', this.value)">
                         </div>
                         <div class="row-inline">
-                            <span class="sub-text">Lunch Overage (m):</span>
-                            <input type="number" class="small-input" value="${log.lunchOverageMinutes}" oninput="updateLogField('${log.id}', 'lunchOverageMinutes', this.value)">
+                            <span class="sub-text">Clock In ISO:</span>
+                            <input type="text" class="small-input" style="width:130px;" value="${log.timeIn}" onchange="updateLogField('${log.id}', 'timeIn', this.value)">
+                        </div>
+                        <div class="row-inline">
+                            <span class="sub-text">Lunch Out ISO:</span>
+                            <input type="text" class="small-input" style="width:130px;" value="${log.lunchOut}" onchange="updateLogField('${log.id}', 'lunchOut', this.value)">
+                        </div>
+                        <div class="row-inline">
+                            <span class="sub-text">Lunch In ISO:</span>
+                            <input type="text" class="small-input" style="width:130px;" value="${log.lunchIn}" onchange="updateLogField('${log.id}', 'lunchIn', this.value)">
+                        </div>
+                        <div class="row-inline">
+                            <span class="sub-text">Clock Out ISO:</span>
+                            <input type="text" class="small-input" style="width:130px;" value="${log.timeOut}" onchange="updateLogField('${log.id}', 'timeOut', this.value)">
                         </div>
                     </div>
                     
