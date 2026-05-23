@@ -39,20 +39,24 @@
         /* Text Variants */
         .bold { font-weight: bold; }
         .weekly-total { font-size: 44px; font-weight: 900; color: #007AFF; line-height: 1; }
+        .variance-total { font-size: 36px; font-weight: 900; line-height: 1; }
         .sub-text { font-size: 13px; color: var(--text-muted); }
         
         /* Dropdown Control Selector */
         .stage-dropdown { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #E5E5EA; background-color: var(--card-bg); font-size: 15px; color: var(--text-main); margin-top: 4px; font-weight: 500; }
         
         /* Live Adjustment Inputs */
-        .live-edit-btn { background: #E5E5EA; border: none; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; color: var(--text-main); cursor: pointer; }
+        .live-edit-btn { background: #E5E5EA; border: none; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; color: var(--text-main); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        .live-edit-btn:active { background: #CECED2; }
         .time-display-box { font-size: 13px; font-weight: bold; color: #007AFF; background: #F2F2F7; padding: 4px 6px; border-radius: 6px; }
         
         /* Form Inputs */
         .input-box { width: 80px; background: #F2F2F7; border: none; padding: 8px; border-radius: 6px; text-align: right; font-size: 18px; font-weight: bold; color: #007AFF; }
-        .small-input { width: 65px; background: #E5E5EA; border: none; padding: 4px; border-radius: 4px; text-align: center; font-size: 13px; }
-        .edit-panel { background: #F2F2F7; padding: 10px; border-radius: 8px; margin-top: 8px; display: none; }
+        .edit-panel { background: #F2F2F7; padding: 12px; border-radius: 10px; margin-top: 10px; display: none; }
+        .edit-row-container { display: flex; flex-direction: column; gap: 10px; }
         .edit-btn { color: #007AFF; font-weight: bold; background: none; border: none; font-size: 14px; cursor: pointer; }
+        .stamp-label { font-size: 13px; font-weight: 600; color: var(--text-main); min-width: 100px; }
+        .value-string-box { font-size: 13px; font-weight: bold; font-family: monospace; min-width: 70px; text-align: center; }
     </style>
 </head>
 <body>
@@ -106,13 +110,13 @@
         
         <div class="divider"></div>
         <div class="row">
-            <span class="sub-text">Estimated Net: <span id="liveNetDisplay" class="bold">0h 0m</span> <span class="sub-text" style="font-size:11px;">(Rounded to 1/4 hr)</span></span>
-            <span class="sub-text">Variance: <span id="liveVarianceDisplay" class="bold">--</span></span>
+            <span class="sub-text">Live Fractional Net: <span id="liveNetDisplay" class="bold">0.00 hrs</span></span>
+            <span class="sub-text">Live Minutes Variance: <span id="liveVarianceDisplay" class="bold">--</span></span>
         </div>
     </div>
 
     <!-- 3. MERGED PRODUCTIVITY DASHBOARD CARD -->
-    <div class="card" style="background: rgba(0,122,255,0.06); border: 1px solid rgba(0,122,255,0.15);">
+    <div class="card" style="background: rgba(0,122,255,0.06); border: 1px solid rgba(0,122,255,0.15); margin-bottom: 12px;">
         <div class="card-label" style="color: #007AFF;">Productivity</div>
         <div class="row" style="margin-top: 12px; margin-bottom: 8px;">
             <div>
@@ -126,7 +130,16 @@
         </div>
     </div>
 
-    <!-- 4. HISTORICAL FEED LIST -->
+    <!-- 4. RUNNING WEEKLY VARIANCE CALCULATOR CARD -->
+    <div class="card" id="weeklyVarianceCard" style="background: #FFFFFF; border: 1px solid #E5E5EA;">
+        <div class="card-label" style="color: var(--text-main);">Running Net Minutes Variance (This Week)</div>
+        <div class="row" style="margin-top: 10px;">
+            <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Cumulative Sun-Sat</div>
+            <div id="weeklyVarianceDisplay" class="variance-total" style="color: #34C759;">0m</div>
+        </div>
+    </div>
+
+    <!-- 5. HISTORICAL FEED LIST -->
     <h2 class="section-title">This Week's History</h2>
     <div id="historyFeedContainer"></div>
 
@@ -159,278 +172,3 @@
             localStorage.setItem('saved_timeIn', timeIn.toISOString());
         } else if (field === 'lunchOut' && lunchOut) {
             lunchOut.setMinutes(lunchOut.getMinutes() + minutes);
-            localStorage.setItem('saved_lunchOut', lunchOut.toISOString());
-        } else if (field === 'lunchIn' && lunchIn) {
-            lunchIn.setMinutes(lunchIn.getMinutes() + minutes);
-            localStorage.setItem('saved_lunchIn', lunchIn.toISOString());
-        }
-        updateUI();
-    }
-
-    function handlePrimaryAction() {
-        const now = new Date();
-        if (currentStage === 'Clock In') {
-            timeIn = now;
-            currentStage = 'Lunch Out';
-            localStorage.setItem('saved_timeIn', timeIn.toISOString());
-        } else if (currentStage === 'Lunch Out') {
-            lunchOut = now;
-            currentStage = 'Lunch In';
-            localStorage.setItem('saved_lunchOut', lunchOut.toISOString());
-        } else if (currentStage === 'Lunch In') {
-            lunchIn = now;
-            currentStage = 'Clock Out & Log Day';
-            localStorage.setItem('saved_lunchIn', lunchIn.toISOString());
-        } else if (currentStage === 'Clock Out & Log Day') {
-            timeOut = now;
-            logDayMetrics(timeOut);
-            return;
-        }
-        localStorage.setItem('saved_stage', currentStage);
-        updateUI();
-    }
-
-    function handleStageDropdownChange(newStage) {
-        currentStage = newStage;
-        const now = new Date();
-        
-        if (newStage === 'Clock In') {
-            timeIn = null; lunchOut = null; lunchIn = null;
-            localStorage.removeItem('saved_timeIn');
-            localStorage.removeItem('saved_lunchOut');
-            localStorage.removeItem('saved_lunchIn');
-        } else if (newStage === 'Lunch Out') {
-            if (!timeIn) timeIn = now;
-            lunchOut = null; lunchIn = null;
-            localStorage.setItem('saved_timeIn', timeIn.toISOString());
-            localStorage.removeItem('saved_lunchOut');
-            localStorage.removeItem('saved_lunchIn');
-        } else if (newStage === 'Lunch In') {
-            if (!timeIn) timeIn = now;
-            if (!lunchOut) lunchOut = now;
-            lunchIn = null;
-            localStorage.setItem('saved_timeIn', timeIn.toISOString());
-            localStorage.setItem('saved_lunchOut', lunchOut.toISOString());
-            localStorage.removeItem('saved_lunchIn');
-        } else if (newStage === 'Clock Out & Log Day') {
-            if (!timeIn) timeIn = now;
-            if (!lunchOut) lunchOut = now;
-            if (!lunchIn) lunchIn = now;
-            localStorage.setItem('saved_timeIn', timeIn.toISOString());
-            localStorage.setItem('saved_lunchOut', lunchOut.toISOString());
-            localStorage.setItem('saved_lunchIn', lunchIn.toISOString());
-        }
-        
-        localStorage.setItem('saved_stage', currentStage);
-        updateUI();
-    }
-
-    // New Formula: Rounding calculations directly to the nearest quarter of an hour (15-minute intervals)
-    function roundToNearestQuarter(totalMinutes) {
-        return Math.round(totalMinutes / 15) * 15;
-    }
-
-    function calculateNetMinutes(tIn, lOut, lIn, tOut) {
-        if (!tIn || !tOut) return 0;
-        
-        const totalShiftMinutes = Math.max(0, Math.floor((tOut - tIn) / 60000));
-        let lunchDuration = 30; // Default flat deduction
-        
-        if (lOut && lIn) {
-            const actualLunchMinutes = Math.floor((lIn - lOut) / 60000);
-            if (actualLunchMinutes > 30) {
-                lunchDuration = actualLunchMinutes; // Expand deduction if they run over overage
-            }
-        }
-        
-        const rawNet = Math.max(0, totalShiftMinutes - lunchDuration);
-        return roundToNearestQuarter(rawNet);
-    }
-
-    function logDayMetrics(finalTimeOut) {
-        const units = parseInt(document.getElementById('prodInput').value) || 0;
-        const currentWeek = getWeekNumber(new Date());
-        
-        const fallbackIn = timeIn ? timeIn : finalTimeOut;
-        const fallbackLunchOut = lunchOut ? lunchOut : fallbackIn;
-        const fallbackLunchIn = lunchIn ? lunchIn : fallbackLunchOut;
-        
-        const netMin = calculateNetMinutes(fallbackIn, fallbackLunchOut, fallbackLunchIn, finalTimeOut);
-        const varianceMin = netMin - 480;
-
-        const newLog = {
-            id: Math.random().toString(36).substr(2, 9),
-            dateString: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
-            timeIn: fallbackIn.toISOString(),
-            lunchOut: fallbackLunchOut.toISOString(),
-            lunchIn: fallbackLunchIn.toISOString(),
-            timeOut: finalTimeOut.toISOString(),
-            productivityUnits: units,
-            netWorkMinutes: netMin,
-            varianceMinutes: varianceMin,
-            weekOfYear: currentWeek
-        };
-
-        weeklyLogs.unshift(newLog);
-        saveLogs();
-
-        // Hard System Reset Cleanups
-        document.getElementById('prodInput').value = '';
-        currentStage = 'Clock In';
-        timeIn = null; lunchOut = null; lunchIn = null; timeOut = null;
-        
-        localStorage.removeItem('saved_stage');
-        localStorage.removeItem('saved_timeIn');
-        localStorage.removeItem('saved_lunchOut');
-        localStorage.removeItem('saved_lunchIn');
-        
-        updateUI();
-    }
-
-    function getWeekNumber(d) {
-        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-        return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
-    }
-
-    function clearOldWeeksLogs() {
-        const currentWeek = getWeekNumber(new Date());
-        weeklyLogs = weeklyLogs.filter(log => log.weekOfYear === currentWeek);
-        saveLogs();
-    }
-
-    function saveLogs() { localStorage.setItem('weekly_logs', JSON.stringify(weeklyLogs)); }
-
-    function toggleEditView(id) {
-        const panel = document.getElementById(`edit-${id}`);
-        const btn = document.getElementById(`btn-${id}`);
-        panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
-        btn.innerText = (panel.style.display === 'block') ? 'Done' : 'Edit';
-    }
-
-    function updateLogField(id, field, value) {
-        weeklyLogs = weeklyLogs.map(log => {
-            if(log.id === id) {
-                if (field === 'productivityUnits') {
-                    log.productivityUnits = parseInt(value) || 0;
-                } else {
-                    // Update ISO timestamps from manual editing text lines safely
-                    try {
-                        const parsedDate = new Date(value);
-                        if (!isNaN(parsedDate.getTime())) {
-                            log[field] = parsedDate.toISOString();
-                        }
-                    } catch(e){}
-                }
-                // Update time math calculations
-                log.netWorkMinutes = calculateNetMinutes(new Date(log.timeIn), new Date(log.lunchOut), new Date(log.lunchIn), new Date(log.timeOut));
-                log.varianceMinutes = log.netWorkMinutes - 480;
-            }
-            return log;
-        });
-        saveLogs();
-        updateUI();
-    }
-
-    function formatMinsToH_M(m) { return `${Math.floor(m / 60)}h ${m % 60}m`; }
-    function formatVariance(m) { return `${m >= 0 ? '+':''}${m}m`; }
-    function formatTimeLabel(dString) { return dString ? new Date(dString).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'; }
-
-    function updateUI() {
-        const btn = document.getElementById('actionBtn');
-        btn.innerText = currentStage;
-        if(currentStage === 'Clock In') btn.style.background = 'var(--color-in)';
-        else if(currentStage === 'Lunch Out') btn.style.background = 'var(--color-lunch-out)';
-        else if(currentStage === 'Lunch In') btn.style.background = 'var(--color-lunch-in)';
-        else btn.style.background = 'var(--color-out)';
-
-        document.getElementById('stageSelect').value = currentStage;
-
-        // Render Active Card
-        const activeShiftCard = document.getElementById('currentShiftCard');
-        if (timeIn) {
-            activeShiftCard.style.display = 'block';
-            
-            document.getElementById('liveInRow').style.display = 'flex';
-            document.getElementById('liveTimeInDisplay').innerText = formatTimeLabel(timeIn);
-            
-            document.getElementById('liveLunchOutRow').style.display = lunchOut ? 'flex' : 'none';
-            if(lunchOut) document.getElementById('liveLunchOutDisplay').innerText = formatTimeLabel(lunchOut);
-            
-            document.getElementById('liveLunchInRow').style.display = lunchIn ? 'flex' : 'none';
-            if(lunchIn) document.getElementById('liveLunchInDisplay').innerText = formatTimeLabel(lunchIn);
-            
-            const liveNet = calculateNetMinutes(timeIn, lunchOut, lunchIn, new Date());
-            document.getElementById('liveNetDisplay').innerText = formatMinsToH_M(liveNet);
-            
-            const variance = liveNet - 480;
-            const varElem = document.getElementById('liveVarianceDisplay');
-            varElem.innerText = formatVariance(variance);
-            varElem.style.color = variance >= 0 ? 'green' : 'red';
-        } else {
-            activeShiftCard.style.display = 'none';
-        }
-
-        // Calculate Weekly Totals
-        const currentWeek = getWeekNumber(new Date());
-        const total = weeklyLogs.filter(l => l.weekOfYear === currentWeek).reduce((s, l) => s + l.productivityUnits, 0);
-        document.getElementById('weeklyTotalDisplay').innerText = total;
-
-        // Render Logs Feed Card Blocks
-        const container = document.getElementById('historyFeedContainer');
-        container.innerHTML = '';
-        
-        weeklyLogs.forEach(log => {
-            const html = `
-                <div class="card" style="border: 1px solid #E5E5EA;">
-                    <div class="row">
-                        <div>
-                            <div class="bold">${log.dateString}</div>
-                            <div class="sub-text" style="font-size:11px; margin-top:2px; color:#555;">
-                                🏁 In: <b>${formatTimeLabel(log.timeIn)}</b> | 
-                                🥪 Out: <b>${formatTimeLabel(log.lunchOut)}</b> | 
-                                🍏 In: <b>${formatTimeLabel(log.lunchIn)}</b> | 
-                                🛑 Out: <b>${formatTimeLabel(log.timeOut)}</b>
-                            </div>
-                        </div>
-                        <button id="btn-${log.id}" class="edit-btn" onclick="toggleEditView('${log.id}')">Edit</button>
-                    </div>
-                    
-                    <div id="edit-${log.id}" class="edit-panel">
-                        <div class="row-inline">
-                            <span class="sub-text">Units Completed:</span>
-                            <input type="number" class="small-input" value="${log.productivityUnits}" oninput="updateLogField('${log.id}', 'productivityUnits', this.value)">
-                        </div>
-                        <div class="row-inline">
-                            <span class="sub-text">Clock In ISO:</span>
-                            <input type="text" class="small-input" style="width:130px;" value="${log.timeIn}" onchange="updateLogField('${log.id}', 'timeIn', this.value)">
-                        </div>
-                        <div class="row-inline">
-                            <span class="sub-text">Lunch Out ISO:</span>
-                            <input type="text" class="small-input" style="width:130px;" value="${log.lunchOut}" onchange="updateLogField('${log.id}', 'lunchOut', this.value)">
-                        </div>
-                        <div class="row-inline">
-                            <span class="sub-text">Lunch In ISO:</span>
-                            <input type="text" class="small-input" style="width:130px;" value="${log.lunchIn}" onchange="updateLogField('${log.id}', 'lunchIn', this.value)">
-                        </div>
-                        <div class="row-inline">
-                            <span class="sub-text">Clock Out ISO:</span>
-                            <input type="text" class="small-input" style="width:130px;" value="${log.timeOut}" onchange="updateLogField('${log.id}', 'timeOut', this.value)">
-                        </div>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    <div class="row">
-                        <span class="sub-text">Net: ${Math.floor(log.netWorkMinutes/60)}h ${log.netWorkMinutes%60}m</span>
-                        <span class="sub-text" style="color: ${log.varianceMinutes >= 0 ? 'green':'red'}">Variance: ${log.varianceMinutes >= 0 ? '+':''}${log.varianceMinutes}m</span>
-                        <span class="bold" style="color: #007AFF">${log.productivityUnits} units</span>
-                    </div>
-                </div>`;
-            container.innerHTML += html;
-        });
-    }
-
-    function updateLiveUnits() { localStorage.setItem('saved_manual_units', document.getElementById('prodInput').value); }
-</script>
-</body>
-</html>
