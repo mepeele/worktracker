@@ -4,75 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Time & Progress</title>
-    <!-- iOS PWA Capabilities -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="WorkTracker">
-    
-    <style>
-        :root {
-            --bg-color: #F2F2F7;
-            --card-bg: #FFFFFF;
-            --text-main: #1C1C1E;
-            --text-muted: #8E8E93;
-            --color-in: #34C759;
-            --color-lunch-out: #007AFF;
-            --color-lunch-in: #FF9500;
-            --color-out: #5856D6;
-        }
-        
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; padding-top: 40px; -webkit-user-select: none; }
-        .section-title { font-size: 20px; font-weight: bold; margin-top: 24px; margin-bottom: 12px; }
-        .card { background: var(--card-bg); padding: 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .card-label { font-size: 12px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        /* Schedule Toggle Selector Styles */
-        .toggle-container { display: flex; background: #E5E5EA; padding: 2px; border-radius: 8px; margin-bottom: 16px; }
-        .toggle-btn { flex: 1; text-align: center; padding: 8px; font-size: 14px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; color: var(--text-muted); background: transparent; transition: all 0.2s; }
-        .toggle-btn.active { background: #FFFFFF; color: #007AFF; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        
-        /* Interactive Buttons */
-        .primary-btn { width: 100%; padding: 24px; border-radius: 14px; border: none; color: white; font-size: 32px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .primary-btn:active { opacity: 0.8; }
-        
-        /* Layout Structuring */
-        .row { display: flex; justify-content: space-between; align-items: center; }
-        .row-inline { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; }
-        .divider { height: 1px; background: #E5E5EA; margin: 12px 0; }
-        
-        /* Text Variants */
-        .bold { font-weight: bold; }
-        .weekly-total { font-size: 44px; font-weight: 900; color: #007AFF; line-height: 1; }
-        .variance-total { font-size: 36px; font-weight: 900; line-height: 1; }
-        .sub-text { font-size: 13px; color: var(--text-muted); }
-        
-        /* Dropdown Control Selector */
-        .stage-dropdown { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #E5E5EA; background-color: var(--card-bg); font-size: 15px; color: var(--text-main); margin-top: 4px; font-weight: 500; }
-        
-        /* Live Adjustment Inputs */
-        .live-edit-btn { background: #E5E5EA; border: none; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; color: var(--text-main); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-        .live-edit-btn:active { background: #CECED2; }
-        .time-display-box { font-size: 13px; font-weight: bold; color: #007AFF; background: #F2F2F7; padding: 4px 6px; border-radius: 6px; }
-        
-        /* Form Inputs */
-        .input-box { width: 80px; background: #F2F2F7; border: none; padding: 8px; border-radius: 6px; text-align: right; font-size: 18px; font-weight: bold; color: #007AFF; }
-        .edit-panel { background: #F2F2F7; padding: 12px; border-radius: 10px; margin-top: 10px; display: none; }
-        .edit-row-container { display: flex; flex-direction: column; gap: 10px; }
-        .edit-btn { color: #007AFF; font-weight: bold; background: none; border: none; font-size: 14px; cursor: pointer; }
-        .stamp-label { font-size: 13px; font-weight: 600; color: var(--text-main); min-width: 100px; }
-        .value-string-box { font-size: 13px; font-weight: bold; font-family: monospace; min-width: 70px; text-align: center; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- NEW: SCHEDULE TOGGLE (8 HOUR vs 10 HOUR) -->
     <div class="toggle-container">
         <button id="toggle8" class="toggle-btn active" onclick="setSchedule(8)">8 Hour Day</button>
         <button id="toggle10" class="toggle-btn" onclick="setSchedule(10)">10 Hour Day</button>
     </div>
 
-    <!-- 1. TOP INTERFACE ACTION CONTAINER -->
     <div style="margin-bottom: 20px;">
         <button id="actionBtn" class="primary-btn" style="background: var(--color-in);" onclick="handlePrimaryAction()">Clock In</button>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding: 0 4px;">
@@ -88,10 +31,8 @@
         </div>
     </div>
 
-    <!-- 2. CURRENT ACTIVE SHIFT CONTROLS -->
     <div class="card" id="currentShiftCard" style="display: none;">
         <div class="card-label">Active Shift Tracker (Live Previews)</div>
-        
         <div id="liveInRow" class="row-inline" style="margin-top: 10px; display: none;">
             <span class="bold" style="font-size: 14px;">Clock In:</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -100,7 +41,6 @@
                 <button class="live-edit-btn" onclick="adjustActiveTime('timeIn', 1)">+1m</button>
             </div>
         </div>
-        
         <div id="liveLunchOutRow" class="row-inline" style="display: none;">
             <span class="bold" style="font-size: 14px;">Lunch Out:</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -109,7 +49,6 @@
                 <button class="live-edit-btn" onclick="adjustActiveTime('lunchOut', 1)">+1m</button>
             </div>
         </div>
-
         <div id="liveLunchInRow" class="row-inline" style="display: none;">
             <span class="bold" style="font-size: 14px;">Lunch In:</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -118,7 +57,6 @@
                 <button class="live-edit-btn" onclick="adjustActiveTime('lunchIn', 1)">+1m</button>
             </div>
         </div>
-        
         <div class="divider"></div>
         <div class="row">
             <span class="sub-text">Live Fractional Net: <span id="liveNetDisplay" class="bold">0.00 hrs</span></span>
@@ -126,7 +64,6 @@
         </div>
     </div>
 
-    <!-- 3. MERGED PRODUCTIVITY DASHBOARD CARD -->
     <div class="card" style="background: rgba(0,122,255,0.06); border: 1px solid rgba(0,122,255,0.15); margin-bottom: 12px;">
         <div class="card-label" style="color: #007AFF;">Productivity</div>
         <div class="row" style="margin-top: 12px; margin-bottom: 8px;">
@@ -141,7 +78,6 @@
         </div>
     </div>
 
-    <!-- 4. RUNNING WEEKLY VARIANCE CALCULATOR CARD -->
     <div class="card" id="weeklyVarianceCard" style="background: #FFFFFF; border: 1px solid #E5E5EA;">
         <div class="card-label" id="weeklyVarianceLabel">Running Net Minutes Variance (8hr Target)</div>
         <div class="row" style="margin-top: 10px;">
@@ -150,21 +86,13 @@
         </div>
     </div>
 
-    <!-- 5. HISTORICAL FEED LIST -->
     <h2 class="section-title">This Week's History</h2>
     <div id="historyFeedContainer"></div>
 
-<script>
-    // System Operational Values
-    let currentStage = 'Clock In';
-    let timeIn = null;
-    let lunchOut = null;
-    let lunchIn = null;
-    let timeOut = null;
-    let weeklyLogs = [];
-    let targetHours = 8; // Default daily target
-
-    window.onload = function() {
-        if(localStorage.getItem('weekly_logs')) {
-            weeklyLogs = JSON.parse(localStorage.getItem('weekly_logs'));
-        }
+    <!-- The 4 Modular Logic Files Included Sequentially -->
+    <script src="app-core.js"></script>
+    <script src="app-math.js"></script>
+    <script src="app-ui-actions.js"></script>
+    <script src="app-ui-render.js"></script>
+</body>
+</html>
