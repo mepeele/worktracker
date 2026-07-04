@@ -10,7 +10,7 @@ function handlePrimaryAction() {
     if (currentStage === 'Clock In') { timeIn = now; currentStage = 'Lunch Out'; localStorage.setItem('saved_timeIn', timeIn.toISOString()); }
     else if (currentStage === 'Lunch Out') { lunchOut = now; currentStage = 'Lunch In'; localStorage.setItem('saved_lunchOut', lunchOut.toISOString()); }
     else if (currentStage === 'Lunch In') { lunchIn = now; currentStage = 'Clock Out & Log Day'; localStorage.setItem('saved_lunchIn', lunchIn.toISOString()); }
-    else if (currentStage === 'Clock Out & Log Day') { timeOut = now; logDayMetrics(now); return; }
+    else if (currentStage === 'Clock Out & Log Day') { logDayMetrics(now); return; }
     localStorage.setItem('saved_stage', currentStage); updateUI();
 }
 
@@ -23,6 +23,14 @@ function handleStageDropdownChange(newStage) {
     localStorage.setItem('saved_stage', currentStage); updateUI();
 }
 
+// Progressive step counters to easily increment units mid-shift without typing
+function stepCurrentDayProductivity(amount) {
+    let input = document.getElementById('prodInput');
+    let currentVal = parseInt(input.value) || 0;
+    input.value = Math.max(0, currentVal + amount);
+    updateLiveUnits(); updateUI();
+}
+
 function logDayMetrics(finalTimeOut) {
     const units = parseInt(document.getElementById('prodInput').value) || 0;
     const fallbackIn = timeIn ? timeIn : finalTimeOut; const fallbackLOut = lunchOut ? lunchOut : fallbackIn; const fallbackLIn = lunchIn ? lunchIn : fallbackLOut;
@@ -33,8 +41,10 @@ function logDayMetrics(finalTimeOut) {
         productivityUnits: units, netWorkMinutes: exactNetMin, varianceMinutes: exactNetMin - (targetHours * 60), weekOfYear: getWeekNumber(new Date())
     };
     weeklyLogs.unshift(newLog); saveLogs();
+    
+    // Completely wipe active inputs and cache memory to restart clean tomorrow
     document.getElementById('prodInput').value = ''; currentStage = 'Clock In'; timeIn = null; lunchOut = null; lunchIn = null; timeOut = null;
-    localStorage.removeItem('saved_stage'); localStorage.removeItem('saved_timeIn'); localStorage.removeItem('saved_lunchOut'); localStorage.removeItem('saved_lunchIn');
+    localStorage.removeItem('saved_stage'); localStorage.removeItem('saved_timeIn'); localStorage.removeItem('saved_lunchOut'); localStorage.removeItem('saved_lunchIn'); localStorage.removeItem('saved_manual_units');
     updateUI();
 }
 
