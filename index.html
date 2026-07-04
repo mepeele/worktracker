@@ -31,32 +31,37 @@
         </div>
     </div>
 
+    <!-- UPGRADED: DIRECT DIGITAL LIVE EDITING FIELDS -->
     <div class="card" id="currentShiftCard" style="display: none;">
-        <div class="card-label">Active Shift Tracker (Live Previews)</div>
+        <div class="card-label">Active Shift Tracker (Direct Digital Overwrites)</div>
+        
         <div id="liveInRow" class="row-inline" style="margin-top: 10px; display: none;">
             <span class="bold" style="font-size: 14px;">Clock In:</span>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <button class="live-edit-btn" onclick="adjustActiveTime('timeIn', -1)">-1m</button>
-                <span id="liveTimeInDisplay" class="time-display-box">--:--</span>
+                <input type="time" id="liveTimeInDisplay" class="time-input-field" onchange="handleDirectTimeOverwrite('timeIn', this.value)">
                 <button class="live-edit-btn" onclick="adjustActiveTime('timeIn', 1)">+1m</button>
             </div>
         </div>
+        
         <div id="liveLunchOutRow" class="row-inline" style="display: none;">
             <span class="bold" style="font-size: 14px;">Lunch Out:</span>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <button class="live-edit-btn" onclick="adjustActiveTime('lunchOut', -1)">-1m</button>
-                <span id="liveLunchOutDisplay" class="time-display-box">--:--</span>
+                <input type="time" id="liveLunchOutDisplay" class="time-input-field" onchange="handleDirectTimeOverwrite('lunchOut', this.value)">
                 <button class="live-edit-btn" onclick="adjustActiveTime('lunchOut', 1)">+1m</button>
             </div>
         </div>
+        
         <div id="liveLunchInRow" class="row-inline" style="display: none;">
             <span class="bold" style="font-size: 14px;">Lunch In:</span>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <button class="live-edit-btn" onclick="adjustActiveTime('lunchIn', -1)">-1m</button>
-                <span id="liveLunchInDisplay" class="time-display-box">--:--</span>
+                <input type="time" id="liveLunchInDisplay" class="time-input-field" onchange="handleDirectTimeOverwrite('lunchIn', this.value)">
                 <button class="live-edit-btn" onclick="adjustActiveTime('lunchIn', 1)">+1m</button>
             </div>
         </div>
+        
         <div class="divider"></div>
         <div class="row">
             <span class="sub-text">Live Fractional Net: <span id="liveNetDisplay" class="bold">0.00 hrs</span></span>
@@ -64,7 +69,6 @@
         </div>
     </div>
 
-    <!-- UPDATED: PROGRESSIVE ENTRY MODULE COMPONENTS -->
     <div class="card" style="background: rgba(0,122,255,0.06); border: 1px solid rgba(0,122,255,0.15); margin-bottom: 12px;">
         <div class="card-label" style="color: #007AFF;">Productivity</div>
         <div class="row" style="margin-top: 12px; margin-bottom: 8px;">
