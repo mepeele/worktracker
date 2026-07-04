@@ -1,77 +1,137 @@
-function stepHistoricTimestamp(id, field, mins) {
-    weeklyLogs = weeklyLogs.map(log => {
-        if (log.id === id) {
-            let d = new Date(log[field]); d.setMinutes(d.getMinutes() + mins); log[field] = d.toISOString();
-            log.netWorkMinutes = getExactNetMinutes(new Date(log.timeIn), new Date(log.lunchOut), new Date(log.lunchIn), new Date(log.timeOut));
-            log.varianceMinutes = log.netWorkMinutes - (targetHours * 60);
-        }
-        return log;
-    });
-    saveLogs(); updateUI();
+function setSchedule(hours) {
+    targetHours = hours; localStorage.setItem('target_hours', hours);
+    document.getElementById('toggle8').classList.toggle('active', hours === 8);
+    document.getElementById('toggle10').classList.toggle('active', hours === 10);
+    document.getElementById('weeklyVarianceLabel').innerText = `Running Net Minutes Variance (${hours}hr Target)`;
+    updateUI();
 }
 
-function stepHistoricProductivity(id, step) {
-    weeklyLogs = weeklyLogs.map(log => { if (log.id === id) log.productivityUnits = Math.max(0, (log.productivityUnits || 0) + step); return log; });
-    saveLogs(); updateUI();
+function formatTimeToHHMM(dateObj) {
+    if (!dateObj) return "";
+    let h = String(dateObj.getHours()).padStart(2, '0');
+    let m = String(dateObj.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
 }
-
-function formatVariance(m) { return `${m >= 0 ? '+':''}${m}m`; }
-function formatTimeLabel(dString) { return dString ? new Date(dString).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'; }
 
 function updateUI() {
-    if (targetHours === 8) {
-        document.getElementById('toggle8').classList.add('active'); document.getElementById('toggle10').classList.remove('active');
-        document.getElementById('weeklyVarianceLabel').innerText = "Running Net Minutes Variance (8hr Target)";
-    } else {
-        document.getElementById('toggle8').classList.remove('active'); document.getElementById('toggle10').classList.add('active');
-        document.getElementById('weeklyVarianceLabel').innerText = "Running Net Minutes Variance (10hr Target)";
-    }
-    const btn = document.getElementById('actionBtn'); btn.innerText = currentStage;
-    if(currentStage === 'Clock In') btn.style.background = 'var(--color-in)';
-    else if(currentStage === 'Lunch Out') btn.style.background = 'var(--color-lunch-out)';
-    else if(currentStage === 'Lunch In') btn.style.background = 'var(--color-lunch-in)';
-    else btn.style.background = 'var(--color-out)';
-    document.getElementById('stageSelect').value = currentStage;
-    const activeShiftCard = document.getElementById('currentShiftCard');
-    if (timeIn) {
-        activeShiftCard.style.display = 'block';
-        document.getElementById('liveInRow').style.display = 'flex'; document.getElementById('liveTimeInDisplay').innerText = formatTimeLabel(timeIn);
-        document.getElementById('liveLunchOutRow').style.display = lunchOut ? 'flex' : 'none'; if(lunchOut) document.getElementById('liveLunchOutDisplay').innerText = formatTimeLabel(lunchOut);
-        document.getElementById('liveLunchInRow').style.display = lunchIn ? 'flex' : 'none'; if(lunchIn) document.getElementById('liveLunchInDisplay').innerText = formatTimeLabel(lunchIn);
-        const liveNetMin = getExactNetMinutes(timeIn, lunchOut, lunchIn, new Date());
-        document.getElementById('liveNetDisplay').innerText = `${convertMinutesToFractionalHours(liveNetMin)} hrs`;
-        const variance = liveNetMin - (targetHours * 60); const varElem = document.getElementById('liveVarianceDisplay');
-        varElem.innerText = formatVariance(variance); varElem.style.color = variance >= 0 ? 'green' : 'red';
-    } else { activeShiftCard.style.display = 'none'; }
-    const currentWeek = getWeekNumber(new Date()); const currentWeeksLogs = weeklyLogs.filter(l => l.weekOfYear === currentWeek);
-    document.getElementById('weeklyTotalDisplay').innerText = currentWeeksLogs.reduce((s, l) => s + l.productivityUnits, 0);
-    const totalVariance = currentWeeksLogs.reduce((s, l) => s + l.varianceMinutes, 0);
-    const weeklyVarDisplay = document.getElementById('weeklyVarianceDisplay');
-    weeklyVarDisplay.innerText = formatVariance(totalVariance); weeklyVarDisplay.style.color = totalVariance >= 0 ? '#34C759' : '#FF3B30';
-    const container = document.getElementById('historyFeedContainer'); container.innerHTML = '';
+    const actionBtn = document.getElementById('actionBtn');
+    const stageSelect = document.getElementById('stageSelect');
+    actionBtn.innerText = currentStage;
+    stageSelect.value = currentStage;
+
+    if (currentStage === 'Clock In') { actionBtn.style.background = "var(--color-in)"; }
+    else if (currentStage === 'Lunch Out') { actionBtn.style.background = "var(--color-l-out)"; }
+    else if (currentStage === 'Lunch In') { actionBtn.style.background = "var(--color-l-in)"; }
+    else { actionBtn.style.background = "var(--color-out)"; }
+
+    const curCard = document.getElementById('currentShiftCard');
+    const rIn = document.getElementById('liveInRow');
+    const rLOut = document.getElementById('liveLunchOutRow');
+    const rLIn = document.getElementById('liveLunchInRow');
+
+    let hasActiveData = false;
+    if (timeIn) { rIn.style.display = "flex"; document.getElementById('liveTimeInDisplay').value = formatTimeToHHMM(timeIn); hasActiveData = true; } else { rIn.style.display = "none"; }
+    if (lunchOut) { rLOut.style.display = "flex"; document.getElementById('liveLunchOutDisplay').value = formatTimeToHHMM(lunchOut); hasActiveData = true; } else { rLOut.style.display = "none"; }
+    if (lunchIn) { rLIn.style.display = "flex"; document.getElementById('liveLunchInDisplay').value = formatTimeToHHMM(lunchIn); hasActiveData = true; } else { rLIn.style.display = "none"; }
+    curCard.style.display = hasActiveData ? "block" : "none";
+
+    let tempOut = new Date();
+    let computedIn = timeIn ? timeIn : tempOut;
+    let computedLOut = lunchOut ? lunchOut : computedIn;
+    let computedLIn = lunchIn ? lunchIn : computedLOut;
+    let currentNetMin = getExactNetMinutes(computedIn, computedLOut, computedLIn, tempOut);
+
+    document.getElementById('liveNetDisplay').innerText = (currentNetMin / 60).toFixed(2) + " hrs";
+    let activeVariance = currentNetMin - (targetHours * 60);
+    let varElement = document.getElementById('liveVarianceDisplay');
+    if (activeVariance >= 0) { varElement.innerText = `+${activeVariance}m`; varElement.style.color = "var(--color-in)"; }
+    else { varElement.innerText = `${activeVariance}m`; varElement.style.color = "var(--color-out)"; }
+
+    let calculatedWeeklyUnits = 0;
+    let totalWeeklyVarianceMinutes = 0;
     weeklyLogs.forEach(log => {
-        container.innerHTML += `
-            <div class="card" style="border: 1px solid #E5E5EA;">
-                <div class="row">
-                    <div><div class="bold">${log.dateString}</div><div class="sub-text" style="font-size:11px; margin-top:2px; color:#555;">In: <b>${formatTimeLabel(log.timeIn)}</b> | Out: <b>${formatTimeLabel(log.lunchOut)}</b> | In: <b>${formatTimeLabel(log.lunchIn)}</b> | Out: <b>${formatTimeLabel(log.timeOut)}</b></div></div>
-                    <div style="display:flex; align-items:center;"><button id="btn-${log.id}" class="edit-btn" onclick="toggleEditView('${log.id}')">Edit</button><button class="del-btn" onclick="deleteHistoryEntry('${log.id}')">Delete</button></div>
-                </div>
-                <div id="edit-${log.id}" class="edit-panel">
-                    <div class="edit-row-container">
-                        <div class="row"><span class="stamp-label">Productivity:</span><div style="display:flex; align-items:center; gap:10px;"><button class="live-edit-btn" onclick="stepHistoricProductivity('${log.id}', -1)">-1</button><span class="value-string-box">${log.productivityUnits}</span><button class="live-edit-btn" onclick="stepHistoricProductivity('${log.id}', 1)">+1</button></div></div>
-                        <div class="row"><div class="divider" style="width:100%; margin:2px 0;"></div></div>
-                        <div class="row"><span class="stamp-label">Clock In:</span><div style="display:flex; align-items:center; gap:10px;"><button class="live-edit-btn" onclick="stepHistoricTimestamp('${log.id}', 'timeIn', -1)">-1m</button><span class="value-string-box">${formatTimeLabel(log.timeIn)}</span><button class="live-edit-btn" onclick="stepHistoricTimestamp('${log.id}', 'timeIn', 1)">+1m</button></div></div>
-                        <div class="row"><span class="stamp-label">Lunch Out:</span><div style="display:flex; align-items:center; gap:10px;"><button class="live-edit-btn" onclick="stepHistoricTimestamp('${log.id}', 'lunchOut', -1)">-1m</button><span class="value-string-box">${formatTimeLabel(log.lunchOut)}</span><button class="live-edit-btn" onclick="stepHistoricTimestamp('${log.id}', 'lunchOut', 1)">+1m</button></div></div>
-                        <div class="row"><span class="stamp-label">Lunch In:</span><div style="display:flex; align-items:center; gap:10px;"><button class="live-edit-btn" onclick="stepHistoricTimestamp('${log.id}', 'lunchIn', -1)">-1m</button><span class="value-string-box">${formatTimeLabel(log.lunchIn)}</span><button class="live-edit-btn" onclick="stepHistoricTimestamp('${log.id}', 'lunchIn', 1)">+1m</button></div></div>
-                        <div class="row"><span class="stamp-label">Clock Out:</span><div style="display:flex; align-items:center; gap:10px;"><button class="live-edit-btn" onclick="stepHistoricTimestamp('${log.id}', 'timeOut', -1)">-1m</button><span class="value-string-box">${formatTimeLabel(log.timeOut)}</span><button class="live-edit-btn" onclick="stepHistoricTimestamp('${log.id}', 'timeOut', 1)">+1m</button></div></div>
-                    </div>
-                </div>
-                <div class="divider"></div>
-                <div class="row">
-                    <span class="sub-text">Net: <b style="color:var(--text-main); font-size:14px;">${convertMinutesToFractionalHours(log.netWorkMinutes)} hrs</b></span>
-                    <span class="sub-text" style="color: ${log.varianceMinutes >= 0 ? 'green':'red'}">Variance: <b>${formatVariance(log.varianceMinutes)}</b></span>
-                    <span class="bold" style="color: #007AFF">${log.productivityUnits} units</b></span>
-                </div>
-            </div>`;
+        calculatedWeeklyUnits += (log.productivityUnits || 0);
+        totalWeeklyVarianceMinutes += (log.varianceMinutes || 0);
     });
+
+    document.getElementById('weeklyTotalDisplay').innerText = calculatedWeeklyUnits;
+    let weeklyVarField = document.getElementById('weeklyVarianceDisplay');
+    if (totalWeeklyVarianceMinutes >= 0) { weeklyVarField.innerText = `+${totalWeeklyVarianceMinutes}m`; weeklyVarField.style.color = "var(--color-in)"; }
+    else { weeklyVarField.innerText = `${totalWeeklyVarianceMinutes}m`; weeklyVarField.style.color = "var(--color-out)"; }
+
+    renderHistoryFeed();
+}
+
+function renderHistoryFeed() {
+    const container = document.getElementById('historyFeedContainer');
+    container.innerHTML = '';
+    if (weeklyLogs.length === 0) { container.innerHTML = '<div class="sub-text" style="text-align:center; padding:20px;">No days tracked yet this week.</div>'; return; }
+    
+    weeklyLogs.forEach(log => {
+        let nHrs = (log.netWorkMinutes / 60).toFixed(2);
+        let vText = log.varianceMinutes >= 0 ? `+${log.varianceMinutes}m` : `${log.varianceMinutes}m`;
+        let vColor = log.varianceMinutes >= 0 ? "var(--color-in)" : "var(--color-out)";
+        let tInStr = formatTimeToHHMM(new Date(log.timeIn));
+        let lOutStr = formatTimeToHHMM(new Date(log.lunchOut));
+        let lInStr = formatTimeToHHMM(new Date(log.lunchIn));
+        let tOutStr = formatTimeToHHMM(new Date(log.timeOut));
+
+        let logCard = document.createElement('div');
+        logCard.className = 'card';
+        logCard.style.borderLeft = `4px solid ${vColor}`;
+        logCard.innerHTML = `
+            <div class="row">
+                <span class="bold">${log.dateString}</span>
+                <span class="bold" style="color: ${vColor};">${vText}</span>
+            </div>
+            <div class="row" style="margin-top: 6px;">
+                <span class="sub-text">Net Worked: ${nHrs} hrs</span>
+                <span class="sub-text" style="color: #007AFF; font-weight:600;">Units: ${log.productivityUnits}</span>
+            </div>
+            <div class="row" style="margin-top:4px; font-size:12px; color:var(--text-muted);">
+                <span>Punches: ${tInStr} → ${lOutStr} → ${lInStr} → ${tOutStr}</span>
+                <button id="btn-${log.id}" class="live-edit-btn" style="color:var(--text-muted); background:none; border:none; text-decoration:underline; padding:0;" onclick="toggleEditView('${log.id}')">Edit</button>
+            </div>
+            <div id="edit-${log.id}" class="edit-panel" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #E5E5EA;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span class="sub-text bold">Modify Day Record</span>
+                    <button class="live-edit-btn" style="background:#FF3B30; color:#FFF; font-size:11px;" onclick="deleteHistoryEntry('${log.id}')">Delete Entire Entry</button>
+                </div>
+                <div class="row" style="gap:6px; font-size:12px; margin-bottom:8px;">
+                    <label>Units: <input type="number" style="width:50px;" value="${log.productivityUnits}" onchange="modifyHistoryField('${log.id}', 'productivityUnits', this.value)"></label>
+                    <label>In: <input type="time" value="${tInStr}" onchange="modifyHistoryTimeField('${log.id}', 'timeIn', this.value)"></label>
+                </div>
+                <div class="row" style="gap:6px; font-size:12px;">
+                    <label>L-Out: <input type="time" value="${lOutStr}" onchange="modifyHistoryTimeField('${log.id}', 'lunchOut', this.value)"></label>
+                    <label>L-In: <input type="time" value="${lInStr}" onchange="modifyHistoryTimeField('${log.id}', 'lunchIn', this.value)"></label>
+                    <label>Out: <input type="time" value="${tOutStr}" onchange="modifyHistoryTimeField('${log.id}', 'timeOut', this.value)"></label>
+                </div>
+            </div>
+        `;
+        container.appendChild(logCard);
+    });
+}
+
+function modifyHistoryField(id, key, val) {
+    let entry = weeklyLogs.find(l => l.id === id);
+    if (!entry) return;
+    entry[key] = parseInt(val) || 0;
+    saveLogs(); updateUI();
+}
+
+function modifyHistoryTimeField(id, key, timeString) {
+    let entry = weeklyLogs.find(l => l.id === id);
+    if (!entry) return;
+    let parsedDate = parseTimeStringToDate(timeString, new Date(entry[key]));
+    if (!parsedDate) return;
+    entry[key] = parsedDate.toISOString();
+    
+    let tIn = new Date(entry.timeIn);
+    let lOut = new Date(entry.lunchOut);
+    let lIn = new Date(entry.lunchIn);
+    let tOut = new Date(entry.timeOut);
+    
+    entry.netWorkMinutes = getExactNetMinutes(tIn, lOut, lIn, tOut);
+    entry.varianceMinutes = entry.netWorkMinutes - (targetHours * 60);
+    saveLogs(); updateUI();
 }
