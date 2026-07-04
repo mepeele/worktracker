@@ -8,7 +8,7 @@ function getExactNetMinutes(tIn, lOut, lIn, tOut) {
 
 function getWeekNumber(d) {
     let date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    // Adjust to closest preceding Sunday to anchor standard week tracking
+    // Anchors standard week tracking to Sunday
     date.setUTCDate(date.getUTCDate() - date.getUTCDay());
     let startOfYear = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
     return Math.ceil((((date - startOfYear) / 86400000) + 1) / 7);
@@ -20,7 +20,6 @@ function clearOldWeeksLogs() {
     if (filtered.length !== weeklyLogs.length) { weeklyLogs = filtered; saveLogs(); }
 }
 
-// Converts HH:MM string from keyboard to an actual Date timestamp
 function parseTimeStringToDate(timeStr, baseDate) {
     if (!timeStr) return null;
     const [hrs, mins] = timeStr.split(':').map(Number);
