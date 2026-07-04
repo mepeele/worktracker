@@ -9,7 +9,6 @@ window.onload = function() {
         if(localStorage.getItem('saved_lunchOut')) lunchOut = new Date(localStorage.getItem('saved_lunchOut'));
         if(localStorage.getItem('saved_lunchIn')) lunchIn = new Date(localStorage.getItem('saved_lunchIn'));
     }
-    // Restores your typed progress if you close the app mid-shift
     if(localStorage.getItem('saved_manual_units')) {
         document.getElementById('prodInput').value = localStorage.getItem('saved_manual_units');
     }
