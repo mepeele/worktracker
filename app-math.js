@@ -1,40 +1,31 @@
-function setSchedule(hours) {
-    targetHours = hours; localStorage.setItem('target_hours', hours);
-    weeklyLogs = weeklyLogs.map(log => { log.varianceMinutes = log.netWorkMinutes - (targetHours * 60); return log; });
-    saveLogs(); updateUI();
-}
-
-function convertMinutesToFractionalHours(m) { return (Math.round((m / 60) * 4) / 4).toFixed(2); }
-
-// FIXED: Converts raw milliseconds to precise whole minutes before calculating the differences
 function getExactNetMinutes(tIn, lOut, lIn, tOut) {
-    if (!tIn || !tOut) return 0;
-    
-    // Convert timestamps to absolute minutes from epoch to avoid boundary rounding bugs
-    const minIn = Math.floor(new Date(tIn).getTime() / 60000);
-    const minOut = Math.floor(new Date(tOut).getTime() / 60000);
-    const totalShiftMinutes = Math.max(0, minOut - minIn);
-    
-    let lunchDuration = 30; // Default flat deduction
-    
-    if (lOut && lIn) {
-        const minLunchOut = Math.floor(new Date(lOut).getTime() / 60000);
-        const minLunchIn = Math.floor(new Date(lIn).getTime() / 60000);
-        const actualLunchMinutes = Math.max(0, minLunchIn - minLunchOut);
-        
-        // Only override the 30-minute standard deduction if your actual lunch run went over 30 minutes
-        if (actualLunchMinutes > 30) {
-            lunchDuration = actualLunchMinutes;
-        }
-    }
-    
-    return Math.max(0, totalShiftMinutes - lunchDuration);
+    let rawShiftMin = (tOut - tIn) / 60000;
+    let rawLunchMin = (lIn - lOut) / 60000;
+    if (rawLunchMin < 0) rawLunchMin = 0;
+    let calculated = Math.round(rawShiftMin - rawLunchMin);
+    return isNaN(calculated) ? 0 : calculated;
 }
 
 function getWeekNumber(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+    let date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    // Adjust to closest preceding Sunday to anchor standard week tracking
+    date.setUTCDate(date.getUTCDate() - date.getUTCDay());
+    let startOfYear = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    return Math.ceil((((date - startOfYear) / 86400000) + 1) / 7);
 }
 
-function clearOldWeeksLogs() { const current = getWeekNumber(new Date()); weeklyLogs = weeklyLogs.filter(log => log.weekOfYear === current); saveLogs(); }
+function clearOldWeeksLogs() {
+    let currentWeek = getWeekNumber(new Date());
+    let filtered = weeklyLogs.filter(log => log.weekOfYear === currentWeek);
+    if (filtered.length !== weeklyLogs.length) { weeklyLogs = filtered; saveLogs(); }
+}
+
+// Converts HH:MM string from keyboard to an actual Date timestamp
+function parseTimeStringToDate(timeStr, baseDate) {
+    if (!timeStr) return null;
+    const [hrs, mins] = timeStr.split(':').map(Number);
+    if (isNaN(hrs) || isNaN(mins)) return null;
+    let target = new Date(baseDate.getTime());
+    target.setHours(hrs, mins, 0, 0);
+    return target;
+}
