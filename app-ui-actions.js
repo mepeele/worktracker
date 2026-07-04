@@ -5,6 +5,18 @@ function adjustActiveTime(field, minutes) {
     updateUI();
 }
 
+// Allows tapping a time directly to overwrite the value seamlessly
+function handleDirectTimeOverwrite(field, timeString) {
+    if (!timeString) return;
+    const computedDate = parseTimeStringToDate(timeString, new Date());
+    if (!computedDate) return;
+    
+    if (field === 'timeIn') { timeIn = computedDate; localStorage.setItem('saved_timeIn', timeIn.toISOString()); }
+    else if (field === 'lunchOut') { lunchOut = computedDate; localStorage.setItem('saved_lunchOut', lunchOut.toISOString()); }
+    else if (field === 'lunchIn') { lunchIn = computedDate; localStorage.setItem('saved_lunchIn', lunchIn.toISOString()); }
+    updateUI();
+}
+
 function handlePrimaryAction() {
     const now = new Date();
     if (currentStage === 'Clock In') { timeIn = now; currentStage = 'Lunch Out'; localStorage.setItem('saved_timeIn', timeIn.toISOString()); }
@@ -23,7 +35,6 @@ function handleStageDropdownChange(newStage) {
     localStorage.setItem('saved_stage', currentStage); updateUI();
 }
 
-// Progressive step counters to easily increment units mid-shift without typing
 function stepCurrentDayProductivity(amount) {
     let input = document.getElementById('prodInput');
     let currentVal = parseInt(input.value) || 0;
@@ -32,9 +43,16 @@ function stepCurrentDayProductivity(amount) {
 }
 
 function logDayMetrics(finalTimeOut) {
+    // SECURITY INTERCEPT: Prompts for verification if sequential punches look identical
+    if (timeIn && lunchOut && (lunchOut.getTime() === timeIn.getTime())) {
+        alert("⚠️ Action Blocked: Your Clock In and Lunch Out times are identical. Use the drop-down or tap the digital display boxes to fix your missing punch before logging out.");
+        return;
+    }
+    
     const units = parseInt(document.getElementById('prodInput').value) || 0;
     const fallbackIn = timeIn ? timeIn : finalTimeOut; const fallbackLOut = lunchOut ? lunchOut : fallbackIn; const fallbackLIn = lunchIn ? lunchIn : fallbackLOut;
     const exactNetMin = getExactNetMinutes(fallbackIn, fallbackLOut, fallbackLIn, finalTimeOut);
+    
     const newLog = {
         id: Math.random().toString(36).substr(2, 9), dateString: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
         timeIn: fallbackIn.toISOString(), lunchOut: fallbackLOut.toISOString(), lunchIn: fallbackLIn.toISOString(), timeOut: finalTimeOut.toISOString(),
@@ -42,7 +60,6 @@ function logDayMetrics(finalTimeOut) {
     };
     weeklyLogs.unshift(newLog); saveLogs();
     
-    // Completely wipe active inputs and cache memory to restart clean tomorrow
     document.getElementById('prodInput').value = ''; currentStage = 'Clock In'; timeIn = null; lunchOut = null; lunchIn = null; timeOut = null;
     localStorage.removeItem('saved_stage'); localStorage.removeItem('saved_timeIn'); localStorage.removeItem('saved_lunchOut'); localStorage.removeItem('saved_lunchIn'); localStorage.removeItem('saved_manual_units');
     updateUI();
