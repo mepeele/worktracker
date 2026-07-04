@@ -1,5 +1,13 @@
 function setSchedule(hours) {
-    targetHours = hours; localStorage.setItem('target_hours', hours);
+    targetHours = hours; 
+    localStorage.setItem('target_hours', hours);
+    
+    // Explicitly recalculate history entry variances to match your toggle selection
+    weeklyLogs.forEach(log => {
+        log.varianceMinutes = log.netWorkMinutes - (hours * 60);
+    });
+    saveLogs(); 
+
     document.getElementById('toggle8').classList.toggle('active', hours === 8);
     document.getElementById('toggle10').classList.toggle('active', hours === 10);
     document.getElementById('weeklyVarianceLabel').innerText = `Running Net Minutes Variance (${hours}hr Target)`;
@@ -16,6 +24,13 @@ function formatTimeToHHMM(dateObj) {
 function updateUI() {
     const actionBtn = document.getElementById('actionBtn');
     const stageSelect = document.getElementById('stageSelect');
+    
+    // Ensures visual button state checks current active target memory layout
+    const targetHoursFromStorage = parseInt(localStorage.getItem('target_hours')) || 8;
+    document.getElementById('toggle8').classList.toggle('active', targetHoursFromStorage === 8);
+    document.getElementById('toggle10').classList.toggle('active', targetHoursFromStorage === 10);
+    document.getElementById('weeklyVarianceLabel').innerText = `Running Net Minutes Variance (${targetHoursFromStorage}hr Target)`;
+
     actionBtn.innerText = currentStage;
     stageSelect.value = currentStage;
 
