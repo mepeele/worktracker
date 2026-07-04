@@ -5,7 +5,6 @@ function adjustActiveTime(field, minutes) {
     updateUI();
 }
 
-// Allows tapping a time directly to overwrite the value seamlessly
 function handleDirectTimeOverwrite(field, timeString) {
     if (!timeString) return;
     const computedDate = parseTimeStringToDate(timeString, new Date());
@@ -43,9 +42,8 @@ function stepCurrentDayProductivity(amount) {
 }
 
 function logDayMetrics(finalTimeOut) {
-    // SECURITY INTERCEPT: Prompts for verification if sequential punches look identical
     if (timeIn && lunchOut && (lunchOut.getTime() === timeIn.getTime())) {
-        alert("⚠️ Action Blocked: Your Clock In and Lunch Out times are identical. Use the drop-down or tap the digital display boxes to fix your missing punch before logging out.");
+        alert("⚠️ Identical time values detected. Correct your times before submitting.");
         return;
     }
     
