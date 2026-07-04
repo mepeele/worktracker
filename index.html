@@ -64,14 +64,19 @@
         </div>
     </div>
 
+    <!-- UPDATED: PROGRESSIVE ENTRY MODULE COMPONENTS -->
     <div class="card" style="background: rgba(0,122,255,0.06); border: 1px solid rgba(0,122,255,0.15); margin-bottom: 12px;">
         <div class="card-label" style="color: #007AFF;">Productivity</div>
         <div class="row" style="margin-top: 12px; margin-bottom: 8px;">
             <div>
-                <div style="font-size: 14px; color: var(--text-muted); font-weight: 500;">Units Completed Today</div>
-                <input type="number" id="prodInput" class="input-box" placeholder="0" oninput="updateLiveUnits()">
+                <div style="font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px;">Units Completed Today</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="live-edit-btn" onclick="stepCurrentDayProductivity(-1)" style="padding: 8px 12px;">-1</button>
+                    <input type="number" id="prodInput" class="input-box" placeholder="0" oninput="updateLiveUnits()">
+                    <button class="live-edit-btn" onclick="stepCurrentDayProductivity(1)" style="padding: 8px 12px;">+1</button>
+                </div>
             </div>
-            <div style="text-align: right; border-left: 1px solid #E5E5EA; padding-left: 24px;">
+            <div style="text-align: right; border-left: 1px solid #E5E5EA; padding-left: 16px;">
                 <div style="font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px;">Running Weekly Total</div>
                 <div id="weeklyTotalDisplay" class="weekly-total">0</div>
             </div>
