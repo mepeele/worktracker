@@ -54,7 +54,7 @@ function updateUI() {
     let computedLIn = lunchIn ? lunchIn : computedLOut;
     let currentNetMin = getExactNetMinutes(computedIn, computedLOut, computedLIn, tempOut);
 
-    document.getElementById('liveNetDisplay').innerText = (currentNetMin / 60).toFixed(2) + " hrs";
+    document.getElementById('liveNetDisplay').innerText = convertMinutesToQuarterHours(currentNetMin) + " hrs";
     let activeVariance = currentNetMin - (targetHours * 60);
     let varElement = document.getElementById('liveVarianceDisplay');
     if (activeVariance >= 0) { varElement.innerText = `+${activeVariance}m`; varElement.style.color = "var(--color-in)"; }
@@ -81,7 +81,7 @@ function renderHistoryFeed() {
     if (weeklyLogs.length === 0) { container.innerHTML = '<div class="sub-text" style="text-align:center; padding:20px;">No days tracked yet this week.</div>'; return; }
     
     weeklyLogs.forEach(log => {
-        let nHrs = (log.netWorkMinutes / 60).toFixed(2);
+        let nHrs = convertMinutesToQuarterHours(log.netWorkMinutes);
         let vText = log.varianceMinutes >= 0 ? `+${log.varianceMinutes}m` : `${log.varianceMinutes}m`;
         let vColor = log.varianceMinutes >= 0 ? "var(--color-in)" : "var(--color-out)";
         let tInStr = formatTimeToHHMM(new Date(log.timeIn));
